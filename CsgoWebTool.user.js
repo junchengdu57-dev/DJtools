@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         工时统计助手 - CS:GO 全面战场 (V43.0)
+// @name         工时统计助手 - CS:GO (V43.3)
 // @namespace    http://tampermonkey.net/
-// @version      43.2
-// @description  新增工时系统
+// @version      43.3
+// @description  修复内网工作量系统访问不到
 // @match        *://*/*
 // @include      file:///*
 // @updateURL    https://raw.githubusercontent.com/junchengdu57-dev/DJtools/main/CsgoWebTool.user.js
@@ -27,10 +27,20 @@
 
     // ================= V41 核心配置 (绝对保留) =================
     const DOMAIN_BASE = "http://work.cqdev.top";
-    const URL_HOME_8989 = `${DOMAIN_BASE}:8989/CqSagereal/`;
-    const API_DATA = `${DOMAIN_BASE}:8989/CqSagereal/controller/workLoad`;
     const API_LOGIN = `${DOMAIN_BASE}:8888/api/auth/login`;
-    const API_PAGE_ADD = `${DOMAIN_BASE}:8989/CqSagereal/page/performance_workload_add`;
+    const SAGEREAL_HOSTS = ["http://172.16.1.77:8989", "http://work.cqdev.top:8989"];
+    const KEY_SR_HOST = 'tm_csgo_v43_sr_host';
+    let CURRENT_SR_HOST = GM_getValue(KEY_SR_HOST, SAGEREAL_HOSTS[0]);
+    function srEndpoints() {
+        const base = `${CURRENT_SR_HOST}/CqSagereal/`;
+        return {
+            base,
+            apiData: `${CURRENT_SR_HOST}/CqSagereal/controller/workLoad`,
+            pageAdd: `${CURRENT_SR_HOST}/CqSagereal/page/performance_workload_add`,
+            referer: `${CURRENT_SR_HOST}/CqSagereal/page/main`,
+            origin: base
+        };
+    }
 
     // Mobiwire 配置
     const MW_URLS = {
@@ -62,8 +72,8 @@
         const headers = {
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
             "X-Requested-With": "XMLHttpRequest",
-            "Referer": `${URL_HOME_8989}page/main`,
-            "Origin": URL_HOME_8989,
+            "Referer": srEndpoints().referer,
+            "Origin": srEndpoints().origin,
             "token": SESSION_TOKEN,
             "Authorization": "Bearer " + SESSION_TOKEN
         };
@@ -101,27 +111,73 @@
         });
     }
 
-    async function ensureSagerealSession(updateStatus) {
-        return new Promise((resolve) => {
-            if (SESSION_ID_8989) { resolve(true); return; }
-            GM_xmlhttpRequest({
-                method: "GET", url: `${URL_HOME_8989}page/main`, headers: { "Accept": "text/html" }, withCredentials: true,
-                onload: function(res) {
-                    try {
-                        const hdr = res.responseHeaders || "";
-                        const lines = hdr.split(/[\r\n]+/);
-                        for (let line of lines) {
-                            if (line.toLowerCase().startsWith('set-cookie:')) {
-                                const raw = line.substring(11).trim();
-                                const m = raw.match(/JSESSIONID=([^;]+)/);
-                                if (m && m[1]) { SESSION_ID_8989 = m[1]; }
+    async function selectSagerealHost(statusCb) {
+        const candidates = [...SAGEREAL_HOSTS];
+        const idx = candidates.indexOf(CURRENT_SR_HOST);
+        if (idx > -1) { candidates.splice(idx, 1); candidates.unshift(CURRENT_SR_HOST); }
+        for (let host of candidates) {
+            if (statusCb) statusCb(`检测 ${host} 登录状态...`);
+            let ok = false;
+            await new Promise((done) => {
+                GM_xmlhttpRequest({
+                    method: "GET",
+                    url: `${host}/CqSagereal/page/main`,
+                    headers: { "Accept": "text/html" },
+                    withCredentials: true,
+                    onload: function(res) {
+                        try {
+                            const text = res.responseText || "";
+                            const isLogin = text.includes("用户登录") || text.includes("login-box");
+                            if (!isLogin) {
+                                const hdr = res.responseHeaders || "";
+                                const lines = hdr.split(/[\r\n]+/);
+                                for (let line of lines) {
+                                    if (line.toLowerCase().startsWith('set-cookie:')) {
+                                        const raw = line.substring(11).trim();
+                                        const m = raw.match(/JSESSIONID=([^;]+)/);
+                                        if (m && m[1]) { SESSION_ID_8989 = m[1]; }
+                                    }
+                                }
+                                CURRENT_SR_HOST = host;
+                                GM_setValue(KEY_SR_HOST, CURRENT_SR_HOST);
+                                ok = true;
                             }
-                        }
-                        // 触发一次业务页面以确保服务端会话可用
-                        GM_xmlhttpRequest({ method: "GET", url: API_PAGE_ADD, headers: getHeaders(), withCredentials: true });
-                    } catch(e) {}
-                    resolve(true);
-                }, onerror: () => resolve(false)
+                        } catch(e) {}
+                        done();
+                    },
+                    onerror: () => done()
+                });
+            });
+            if (ok) return true;
+        }
+        return false;
+    }
+
+    function openLoginSelection() {
+        return new Promise((resolve) => {
+            const choice = confirm("检测到未登录工作量系统。\n是否打开 172.16.1.77 登录界面？\n选择‘取消’则打开 work.cqdev.top");
+            const url = choice ? "http://172.16.1.77:8989/CqSagereal/page/main" : "http://work.cqdev.top:8989/CqSagereal/page/main";
+            GM_openInTab(url, { active: true });
+            resolve();
+        });
+    }
+
+    async function ensureSagerealSession(updateStatus) {
+        const ok = await selectSagerealHost(updateStatus);
+        if (!ok) {
+            if (updateStatus) updateStatus("未登录，准备跳转登录页...");
+            await openLoginSelection();
+            return false;
+        }
+        const sr = srEndpoints();
+        return new Promise((resolve) => {
+            GM_xmlhttpRequest({
+                method: "GET",
+                url: sr.pageAdd,
+                headers: getHeaders(),
+                withCredentials: true,
+                onload: function() { resolve(true); },
+                onerror: () => resolve(false)
             });
         });
     }
@@ -131,9 +187,10 @@
         await ensureSagerealSession(statusCb);
         statusCb("解析页面...");
         try {
+            const sr = srEndpoints();
             const html = await new Promise((resolve, reject) => {
                 GM_xmlhttpRequest({
-                    method: "GET", url: API_PAGE_ADD, headers: getHeaders(), withCredentials: true,
+                    method: "GET", url: sr.pageAdd, headers: getHeaders(), withCredentials: true,
                     onload: (res) => res.status === 200 ? resolve(res.responseText) : reject("HTTP " + res.status),
                     onerror: () => reject("Network Error")
                 });
@@ -172,8 +229,9 @@
 
         try {
             const resText = await new Promise((resolve, reject) => {
+                const sr = srEndpoints();
                 GM_xmlhttpRequest({
-                    method: "POST", url: API_DATA, headers: getHeaders(), data: params.toString(), withCredentials: true,
+                    method: "POST", url: sr.apiData, headers: getHeaders(), data: params.toString(), withCredentials: true,
                     onload: (res) => res.status === 200 ? resolve(res.responseText) : reject(`HTTP ${res.status}`), onerror: () => reject("Network")
                 });
             });
@@ -703,7 +761,7 @@
                 <div class="manual-content">
                     <h3>✌ V43.0 修正版更新</h3>
                     <ul>
-                        
+
                     </ul>
                     <h3>🏆 V42.8 修正版更新</h3>
                     <ul>
@@ -1085,7 +1143,7 @@
                 }
                 return; // 拖拽时不再更新activeSector
             }
-            
+
             // V41逻辑：跟踪activeSector用于悬停高亮和点击
             const rect = sensor.getBoundingClientRect();
             const x = e.clientX - rect.left - rect.width / 2;
@@ -1172,7 +1230,7 @@
         sensor.addEventListener('click', () => {
             // 如果正在拖拽或刚刚完成拖拽，不处理点击
             if (isDragging || justDragged) return;
-            
+
             if (!activeSector) return;
             const el = document.getElementById(`sec-${activeSector}`);
             if (el && el.classList.contains('disabled')) {
@@ -1198,9 +1256,9 @@
                 setDates(activeSector);
             } else if (currentMode === 'ADD') {
                 if (activeSector === 'submit') submitWorkloadAction();
-                else if (activeSector === 'reset') { 
-                    document.getElementById('add-bug').value=''; 
-                    document.getElementById('add-content').value=''; 
+                else if (activeSector === 'reset') {
+                    document.getElementById('add-bug').value='';
+                    document.getElementById('add-content').value='';
                 }
                 else if (activeSector === 'back') renderWheel('MENU');
             } else if (activeSector === 'back') {
@@ -1380,8 +1438,9 @@
                 params.append('content', '');
 
                 const responseText = await new Promise((resolve, reject) => {
+                    const sr = srEndpoints();
                     GM_xmlhttpRequest({
-                        method: "POST", url: API_DATA, headers: getHeaders(), data: params.toString(), withCredentials: true,
+                        method: "POST", url: sr.apiData, headers: getHeaders(), data: params.toString(), withCredentials: true,
                         onload: (res) => {
                             if(res.status === 200) resolve(res.responseText);
                             else reject(`HTTP ${res.status}`);
