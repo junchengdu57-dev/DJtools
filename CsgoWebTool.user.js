@@ -1,9 +1,8 @@
 // ==UserScript==
-// @name         工时统计助手 - CS:GO 战术指挥官 (V42.8 修正版)
+// @name         工时统计助手 - CS:GO 全面战场 (V43.0)
 // @namespace    http://tampermonkey.net/
-// @version      42.8
-// @description  V41核心(明文密码/稳定查询) + V55界面(中文轮盘/薪资报表) + 查询修复 + 交互优化 + Jira日期自动填充 + 项目匹配增强 + 二级菜单修复 + UI显示修复
-// @author       DJ
+// @version      43
+// @description  V42.8核心 + 轮盘修复 + 工时系统完成
 // @match        *://*/*
 // @include      file:///*
 // @connect      work.cqdev.top
@@ -22,7 +21,7 @@
 (function() {
     'use strict';
 
-    console.log("🔥 [CS:GO] V42.8 修正版启动 - Core 42，作者DJ");
+    console.log("🔥 [CS:GO] V43.0 启动 - Core 43，作者DJ");
 
     // ================= V41 核心配置 (绝对保留) =================
     const DOMAIN_BASE = "http://work.cqdev.top";
@@ -519,7 +518,7 @@
         .center-hub { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120px; height: 120px; border-radius: 50%; background: #222; border: 3px solid #eab543; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 40; box-shadow: 0 0 20px rgba(0,0,0,0.5); pointer-events: auto; cursor: pointer; transition: background 0.2s; }
         .center-hub:hover { background: #333; }
         .hub-text { color: #eab543; font-weight: bold; font-size: 16px; }
-        .info-panel { width: 600px; height: 750px; background: rgba(30, 30, 30, 0.98); border-left: 4px solid #eab543; padding: 25px 30px; color: #ddd; box-shadow: 10px 10px 40px rgba(0,0,0,0.6); z-index: 50; display: flex; flex-direction: column; position: relative; overflow: hidden; pointer-events: auto !important; border-radius: 0 8px 8px 0; }
+        .info-panel { width: 600px; height: 700px; background: rgba(30, 30, 30, 0.98); border-left: 4px solid #eab543; padding: 25px 30px; color: #ddd; box-shadow: 10px 10px 40px rgba(0,0,0,0.6); z-index: 50; display: flex; flex-direction: column; position: relative; overflow: hidden; pointer-events: auto !important; border-radius: 0 8px 8px 0; }
         .view-container { display: flex; flex-direction: column; height: 100%; transition: opacity 0.2s; width: 100%; overflow-y: auto; }
         .view-container.hidden { display: none; opacity: 0; }
         .panel-header { font-size: 24px; color: #eab543; margin-bottom: 20px; border-bottom: 1px solid #555; padding-bottom: 10px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
@@ -603,12 +602,12 @@
                             <div id="wheel-labels"></div>
                         </div>
                     </div>
-                    <button id="btn-open-manual" class="manual-btn">📘 版本说明书 (V42.8)</button>
+                    <button id="btn-open-manual" class="manual-btn">📘 版本说明书 (V43)</button>
                 </div>
 
                 <div class="info-panel" id="panel-right" style="opacity:0; pointer-events:none;">
                     <div id="view-query" class="view-container hidden">
-                        <div class="panel-header"><div>📊 工作量统计</div><div style="font-size:12px;color:#666;">core 42，作者DJ</div></div>
+                        <div class="panel-header"><div>📊 工作量统计</div><div style="font-size:12px;color:#666;">core 43，作者DJ</div></div>
                         <div class="date-row" style="display:flex; gap:10px; margin-bottom:15px;">
                             <input type="date" id="cs-start" class="cs-input">
                             <input type="date" id="cs-end" class="cs-input">
@@ -624,7 +623,7 @@
                     </div>
 
                     <div id="view-add" class="view-container hidden">
-                        <div class="panel-header"><div>📝 填写工作量</div><div style="font-size:12px;color:#666;">core 42，作者DJ</div></div>
+                        <div class="panel-header"><div>📝 填写工作量</div><div style="font-size:12px;color:#666;">core 43，作者DJ</div></div>
                         <div class="add-form">
                             <div class="form-row"><div class="form-group" style="flex:1"><label class="form-label">开始日期</label><input type="date" id="add-start" class="add-input"></div><div class="form-group" style="flex:1"><label class="form-label">完成日期</label><input type="date" id="add-end" class="add-input"></div></div>
                             <div class="form-group proj-search-wrapper">
@@ -653,7 +652,7 @@
                     </div>
 
                     <div id="view-salary" class="view-container hidden">
-                        <div class="panel-header"><div>💰 薪资报表 (Mobiwire)</div><div style="font-size:12px;color:#666;">core 42，作者DJ</div></div>
+                        <div class="panel-header"><div>💰 薪资报表 (Mobiwire)</div><div style="font-size:12px;color:#666;">core 43，作者DJ</div></div>
                         <div style="text-align:center; padding: 20px;">
                             <div style="display:flex; gap:12px; justify-content:center; margin-bottom:15px; align-items:center;">
                                 <span>年份</span>
@@ -668,7 +667,7 @@
                     </div>
 
                     <div id="view-settings" class="view-container hidden">
-                        <div class="panel-header"><div>⚙️ 账号设置</div><div style="font-size:12px;color:#666;">core 42，作者DJ</div></div>
+                        <div class="panel-header"><div>⚙️ 账号设置</div><div style="font-size:12px;color:#666;">core 43，作者DJ</div></div>
                         <div class="auth-form">
                             <div class="auth-section">
                                 <div class="auth-section-title">工时系统 (Sagereal)</div>
@@ -685,7 +684,7 @@
                     </div>
 
                     <div id="view-history" class="view-container hidden">
-                        <div class="panel-header"><div>📜 填报历史</div><div style="font-size:12px;color:#666;">core 42，作者DJ</div></div>
+                        <div class="panel-header"><div>📜 填报历史</div><div style="font-size:12px;color:#666;">core 43，作者DJ</div></div>
                         <div class="hist-summary" style="display:flex; justify-content:space-around; margin-bottom:15px; background:#222; padding:10px; border-radius:4px;">
                             <div class="hist-sum-item"><div>本月已填</div><div class="hist-sum-val" id="hist-month-val" style="color:#eab543; font-weight:bold;">0h</div></div>
                             <div style="width:1px; background:#444;"></div>
@@ -698,11 +697,15 @@
             </div>
 
             <div id="manual-modal">
-                <div class="manual-header" id="manual-header"><h2>📘 战术指挥官操作手册 V42.8</h2><div class="close-manual" id="close-manual">×</div></div>
+                <div class="manual-header" id="manual-header"><h2>📘 战术指挥官操作手册 V43.0</h2><div class="close-manual" id="close-manual">×</div></div>
                 <div class="manual-content">
+                    <h3>✌ V43.0 修正版更新</h3>
+                    <ul>
+                        
+                    </ul>
                     <h3>🏆 V42.8 修正版更新</h3>
                     <ul>
-                        <li><strong>UI显示修复</strong>：修复了表单显示不全的问题，面板高度恢复为固定750px（从min-height改为固定height），添加overflow: hidden处理，确保所有内容正常显示和滚动。</li>
+                        <li><strong>UI显示修复</strong>：修复了表单显示不全的问题，面板高度恢复为固定700px（从min-height改为固定height），添加overflow: hidden处理，确保所有内容正常显示和滚动。</li>
                         <li><strong>查询功能修复</strong>：修复了分页查询中pageInfo处理的问题，兼容数组和对象两种返回结构，当返回数组时pageInfo为null，确保分页逻辑正确执行，查询结果正常显示。</li>
                         <li><strong>面板显示优化</strong>：修复了轮盘点击后面板不显示的问题，确保QUERY模式下点击Q1/Q2/Q3/Q4/本月后面板正确显示，添加了面板显示状态的强制设置。</li>
                         <li><strong>表单滚动优化</strong>：为add-form添加overflow-y: auto和padding-right，确保表单内容过长时可以正常滚动查看。</li>
@@ -973,6 +976,7 @@
         let isDragging = false;
         let dragStartSector = null;
         let dragStartPos = { x: 0, y: 0 };
+        let justDragged = false; // 标记是否刚刚完成拖拽，用于阻止拖拽后的点击
         let currentMode = 'MENU';
         let activeSector = null;
         let menuOrder = JSON.parse(GM_getValue(KEY_MENU_ORDER, '[]'));
@@ -1043,19 +1047,14 @@
 
         renderWheel('MENU');
 
-        // ★★★ V42.6 恢复：拖拽与点击逻辑（支持二级菜单） ★★★
+        // ★★★ V41对齐：拖拽功能（仅主菜单） ★★★
         sensor.addEventListener('mousedown', (e) => {
             if (currentMode !== 'MENU') return; // 只在主菜单时允许拖拽排序
             const rect = sensor.getBoundingClientRect();
             const x = e.clientX - rect.left - rect.width / 2;
             const y = e.clientY - rect.top - rect.height / 2;
-            let angle = Math.atan2(y, x) * 180 / Math.PI + 90;
+            let angle = Math.atan2(y, x) * (180 / Math.PI) + 90;
             if (angle < 0) angle += 360;
-            if (angle >= 360) angle -= 360;
-            if (angle >= 360) angle -= 360;
-            if (angle >= 360) angle -= 360;
-            if (angle >= 360) angle -= 360;
-            if (angle >= 360) angle -= 360;
             const idx = Math.floor(angle / (360 / MENUS[currentMode].count));
             if (idx >= 0 && idx < MENUS[currentMode].count) {
                 dragStartSector = idx;
@@ -1064,7 +1063,9 @@
             }
         });
 
-        document.addEventListener('mousemove', (e) => {
+        // ★★★ V41对齐：恢复mousemove跟踪activeSector（用于悬停高亮和点击） ★★★
+        sensor.addEventListener('mousemove', (e) => {
+            // 如果正在拖拽，只处理拖拽逻辑
             if (dragStartSector !== null && currentMode === 'MENU') {
                 const dist = Math.sqrt(Math.pow(e.clientX - dragStartPos.x, 2) + Math.pow(e.clientY - dragStartPos.y, 2));
                 if (dist > 10) {
@@ -1073,27 +1074,69 @@
                     const rect = sensor.getBoundingClientRect();
                     const x = e.clientX - rect.left - rect.width / 2;
                     const y = e.clientY - rect.top - rect.height / 2;
-                    let angle = Math.atan2(y, x) * 180 / Math.PI + 90;
+                    let angle = Math.atan2(y, x) * (180 / Math.PI) + 90;
                     if (angle < 0) angle += 360;
-                    if (angle >= 360) angle -= 360;
                     const currentIdx = Math.floor(angle / (360 / MENUS[currentMode].count));
                     if(currentIdx !== dragStartSector && svgMain.children[currentIdx]) {
                         svgMain.children[currentIdx].classList.add('drag-target');
                     }
                 }
+                return; // 拖拽时不再更新activeSector
+            }
+            
+            // V41逻辑：跟踪activeSector用于悬停高亮和点击
+            const rect = sensor.getBoundingClientRect();
+            const x = e.clientX - rect.left - rect.width / 2;
+            const y = e.clientY - rect.top - rect.height / 2;
+            let angle = Math.atan2(y, x) * (180 / Math.PI) + 90;
+            if (angle < 0) angle += 360;
+
+            let targetId = null;
+            const data = MENUS[currentMode];
+
+            if (data.count === 1 && data.sectors[0].isBack) {
+                if (angle >= 180 && angle <= 360) targetId = 'back';
+            } else if (currentMode === 'ADD') {
+                if (angle >= 0 && angle < 90) targetId = 'submit';
+                else if (angle >= 90 && angle < 180) targetId = 'reset';
+                else if (angle >= 180 && angle <= 360) targetId = 'back';
+            } else {
+                const step = 360 / data.count;
+                const idx = Math.floor(angle / step);
+                if (currentMode === 'MENU') {
+                    // 主菜单使用menuOrder映射
+                    if (idx >= 0 && idx < menuOrder.length) {
+                        targetId = menuOrder[idx];
+                    }
+                } else {
+                    // 其他模式直接使用sectors
+                    if (data.sectors[idx]) targetId = data.sectors[idx].id;
+                }
+            }
+
+            if (activeSector !== targetId) {
+                activeSector = targetId;
+                document.querySelectorAll('.svg-sector').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('.wedge-label').forEach(el => el.classList.remove('active'));
+                if (targetId) {
+                    const sec = document.getElementById(`sec-${targetId}`);
+                    const lbl = document.getElementById(`lbl-${targetId}`);
+                    if(sec && !sec.classList.contains('disabled')) sec.classList.add('active');
+                    if(lbl && !lbl.classList.contains('disabled')) lbl.classList.add('active');
+                }
             }
         });
 
+        // ★★★ V41对齐：mouseup处理拖拽交换 ★★★
         document.addEventListener('mouseup', (e) => {
-            if (dragStartSector !== null) {
-                if (isDragging && currentMode === 'MENU') {
-                    // 交换逻辑（仅主菜单）
+            if (dragStartSector !== null && currentMode === 'MENU') {
+                if (isDragging) {
+                    // 拖拽交换逻辑（仅主菜单）
                     const rect = sensor.getBoundingClientRect();
                     const x = e.clientX - rect.left - rect.width / 2;
                     const y = e.clientY - rect.top - rect.height / 2;
-                    let angle = Math.atan2(y, x) * 180 / Math.PI + 90;
+                    let angle = Math.atan2(y, x) * (180 / Math.PI) + 90;
                     if (angle < 0) angle += 360;
-                    if (angle >= 360) angle -= 360;
                     const dropIdx = Math.floor(angle / (360 / MENUS[currentMode].count));
                     if (dropIdx !== dragStartSector && dropIdx >= 0 && dropIdx < MENUS[currentMode].count) {
                         const temp = menuOrder[dragStartSector];
@@ -1102,61 +1145,19 @@
                         GM_setValue(KEY_MENU_ORDER, JSON.stringify(menuOrder));
                         renderWheel('MENU');
                     }
-                } else if (!isDragging && currentMode === 'MENU') {
-                    // 主菜单点击：使用记录的索引直接导航，避免角度重算误判
-                    const targetId = menuOrder[dragStartSector];
-                    if (targetId) {
-                        const el = document.getElementById(`sec-${targetId}`);
-                        if (el && el.classList.contains('disabled')) {
-                            alert("⚠️ 请先在[账号设置]中配置萨瑞系统账号");
-                            renderWheel('SETTINGS');
-                        } else {
-                            const wrapper = document.getElementById('wheel-wrapper');
-                            wrapper.classList.add('wheel-click-anim');
-                            setTimeout(() => wrapper.classList.remove('wheel-click-anim'), 100);
-                            if (targetId === 'query') { renderWheel('QUERY'); setDates('curr'); }
-                            else if (targetId === 'add') renderWheel('ADD');
-                            else if (targetId === 'settings') renderWheel('SETTINGS');
-                            else if (targetId === 'history') renderWheel('HISTORY');
-                            else if (targetId === 'salary') renderWheel('SALARY');
-                            else if (targetId === 'timesheet') renderWheel('TIMESHEET');
-                            else if (targetId === 'jira') GM_openInTab(URL_LOGIN_INT, { active: true });
-                            else if (targetId === 'jira-ex') GM_openInTab(URL_LOGIN_EXT, { active: true });
-                        }
-                    } else {
-                        // 回退：无法获取索引时按角度重算
-                        handleWheelClick(e);
+                    // 标记刚刚完成拖拽，阻止后续的click事件
+                    justDragged = true;
+                } else {
+                    // 即使没有拖拽，如果dragStartSector不为null，说明用户可能想要拖拽
+                    // 但移动距离不够，这种情况下也应该阻止点击（避免误触发）
+                    // 但如果移动距离很小（< 5px），可能是正常点击，允许点击
+                    const dist = Math.sqrt(Math.pow(e.clientX - dragStartPos.x, 2) + Math.pow(e.clientY - dragStartPos.y, 2));
+                    if (dist > 5) {
+                        justDragged = true;
                     }
                 }
-            } else if (currentMode === 'MENU') {
-                // 兜底：即使未命中mousedown，也在mouseup时按当前位置计算索引并导航
-                const rect = sensor.getBoundingClientRect();
-                const x = e.clientX - rect.left - rect.width / 2;
-                const y = e.clientY - rect.top - rect.height / 2;
-                let angle = Math.atan2(y, x) * 180 / Math.PI + 90;
-                if (angle < 0) angle += 360;
-                if (angle >= 360) angle -= 360;
-                const idx = Math.floor(angle / (360 / MENUS[currentMode].count));
-                const targetId = menuOrder[idx];
-                if (targetId) {
-                    const el = document.getElementById(`sec-${targetId}`);
-                    if (el && el.classList.contains('disabled')) {
-                        alert("⚠️ 请先在[账号设置]中配置萨瑞系统账号");
-                        renderWheel('SETTINGS');
-                    } else {
-                        const wrapper = document.getElementById('wheel-wrapper');
-                        wrapper.classList.add('wheel-click-anim');
-                        setTimeout(() => wrapper.classList.remove('wheel-click-anim'), 100);
-                        if (targetId === 'query') { renderWheel('QUERY'); setDates('curr'); }
-                        else if (targetId === 'add') renderWheel('ADD');
-                        else if (targetId === 'settings') renderWheel('SETTINGS');
-                        else if (targetId === 'history') renderWheel('HISTORY');
-                        else if (targetId === 'salary') renderWheel('SALARY');
-                        else if (targetId === 'timesheet') renderWheel('TIMESHEET');
-                        else if (targetId === 'jira') GM_openInTab(URL_LOGIN_INT, { active: true });
-                        else if (targetId === 'jira-ex') GM_openInTab(URL_LOGIN_EXT, { active: true });
-                    }
-                }
+                // 在下一个事件循环中重置标志，确保click事件能检测到
+                setTimeout(() => { justDragged = false; }, 10);
             }
             dragStartSector = null;
             isDragging = false;
@@ -1165,97 +1166,13 @@
 
 
 
-        // ★★★ V42.6 修复：添加独立的click事件监听器处理二级菜单点击 ★★★
-        sensor.addEventListener('click', (e) => {
-            // 只在非主菜单模式下处理点击（二级菜单）
-            if (currentMode === 'MENU') return; // 主菜单的点击由mouseup处理（支持拖拽）
-
-            // 重新计算点击的目标扇区（确保准确性）
-            const rect = sensor.getBoundingClientRect();
-            const x = e.clientX - rect.left - rect.width / 2;
-            const y = e.clientY - rect.top - rect.height / 2;
-            let angle = Math.atan2(y, x) * 180 / Math.PI + 90;
-            if (angle < 0) angle += 360;
-
-            const data = MENUS[currentMode];
-            let targetId = null;
-
-            if (data.count === 1 && data.sectors[0].isBack) {
-                if (angle >= 180 && angle <= 360) targetId = 'back';
-            } else if (currentMode === 'ADD') {
-                if (angle >= 0 && angle < 90) targetId = 'submit';
-                else if (angle >= 90 && angle < 180) targetId = 'reset';
-                else if (angle >= 180 && angle <= 360) targetId = 'back';
-            } else {
-                const step = 360 / data.count;
-                const idx = Math.floor(angle / step);
-                if (data.sectors[idx]) {
-                    targetId = data.sectors[idx].id;
-                }
-            }
-
-            if (!targetId) return;
-
-            const el = document.getElementById(`sec-${targetId}`);
-            if (el && el.classList.contains('disabled')) {
-                alert("⚠️ 请先在[账号设置]中配置萨瑞系统账号");
-                renderWheel('SETTINGS');
-                return;
-            }
-
-            const wrapper = document.getElementById('wheel-wrapper');
-            wrapper.classList.add('wheel-click-anim');
-            setTimeout(() => wrapper.classList.remove('wheel-click-anim'), 100);
-
-            if (currentMode === 'QUERY') {
-                setDates(targetId);
-                // 确保面板显示
-                panel.style.opacity = '1';
-                panel.style.pointerEvents = 'auto';
-                document.getElementById('view-query').classList.remove('hidden');
-            } else if (currentMode === 'ADD') {
-                if (targetId === 'submit') submitWorkloadAction();
-                else if (targetId === 'reset') {
-                    document.getElementById('add-bug').value = '';
-                    document.getElementById('add-content').value = '';
-                }
-                else if (targetId === 'back') renderWheel('MENU');
-            } else if (targetId === 'back') {
-                renderWheel('MENU');
-            }
-        });
-
-        // ★★★ V42.6 恢复：点击处理函数（支持二级菜单） ★★★
-        function handleWheelClick(e) {
-            const data = MENUS[currentMode];
-            let targetId = null;
-            const rect = sensor.getBoundingClientRect();
-            const x = e.clientX - rect.left - rect.width / 2;
-            const y = e.clientY - rect.top - rect.height / 2;
-            let angle = Math.atan2(y, x) * 180 / Math.PI + 90;
-            if (angle < 0) angle += 360;
-
-            if (data.count === 1 && data.sectors[0].isBack) {
-                if (angle >= 180 && angle <= 360) targetId = 'back';
-            } else if (currentMode === 'ADD') {
-                if (angle >= 0 && angle < 90) targetId = 'submit';
-                else if (angle >= 90 && angle < 180) targetId = 'reset';
-                else if (angle >= 180 && angle <= 360) targetId = 'back';
-            } else {
-                const step = 360 / data.count;
-                const idx = Math.floor(angle / step);
-                if (data.sectors[idx]) {
-                    if (currentMode === 'MENU') {
-                        targetId = menuOrder[idx];
-                    } else {
-                        targetId = data.sectors[idx].id;
-                    }
-                }
-            }
-
-            if (!targetId) return;
-
-            const el = document.getElementById(`sec-${targetId}`);
+        // ★★★ V41对齐：使用click事件和activeSector处理所有点击 ★★★
+        sensor.addEventListener('click', () => {
+            // 如果正在拖拽或刚刚完成拖拽，不处理点击
+            if (isDragging || justDragged) return;
+            
+            if (!activeSector) return;
+            const el = document.getElementById(`sec-${activeSector}`);
             if (el && el.classList.contains('disabled')) {
                 alert("⚠️ 请先在[账号设置]中配置萨瑞系统账号");
                 renderWheel('SETTINGS');
@@ -1267,27 +1184,27 @@
             setTimeout(() => wrapper.classList.remove('wheel-click-anim'), 100);
 
             if (currentMode === 'MENU') {
-                if (targetId === 'query') { renderWheel('QUERY'); setDates('curr'); }
-                else if (targetId === 'add') renderWheel('ADD');
-                else if (targetId === 'settings') renderWheel('SETTINGS');
-                else if (targetId === 'history') renderWheel('HISTORY');
-                else if (targetId === 'salary') renderWheel('SALARY');
-                else if (targetId === 'timesheet') renderWheel('TIMESHEET');
-                else if (targetId === 'jira') GM_openInTab(URL_LOGIN_INT, { active: true });
-                else if (targetId === 'jira-ex') GM_openInTab(URL_LOGIN_EXT, { active: true });
+                if (activeSector === 'query') { renderWheel('QUERY'); setDates('curr'); }
+                else if (activeSector === 'add') renderWheel('ADD');
+                else if (activeSector === 'settings') renderWheel('SETTINGS');
+                else if (activeSector === 'history') renderWheel('HISTORY');
+                else if (activeSector === 'salary') renderWheel('SALARY');
+                else if (activeSector === 'timesheet') renderWheel('TIMESHEET');
+                else if (activeSector === 'jira') GM_openInTab(URL_LOGIN_INT, { active: true });
+                else if (activeSector === 'jira-ex') GM_openInTab(URL_LOGIN_EXT, { active: true });
             } else if (currentMode === 'QUERY') {
-                setDates(targetId);
+                setDates(activeSector);
             } else if (currentMode === 'ADD') {
-                if (targetId === 'submit') submitWorkloadAction();
-                else if (targetId === 'reset') {
-                    document.getElementById('add-bug').value = '';
-                    document.getElementById('add-content').value = '';
+                if (activeSector === 'submit') submitWorkloadAction();
+                else if (activeSector === 'reset') { 
+                    document.getElementById('add-bug').value=''; 
+                    document.getElementById('add-content').value=''; 
                 }
-                else if (targetId === 'back') renderWheel('MENU');
-            } else if (targetId === 'back') {
+                else if (activeSector === 'back') renderWheel('MENU');
+            } else if (activeSector === 'back') {
                 renderWheel('MENU');
             }
-        }
+        });
 
         // 悬停高亮
         sensor.addEventListener('mousemove', (e) => {
