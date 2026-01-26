@@ -5,6 +5,8 @@
 // @description  新增工时系统
 // @match        *://*/*
 // @include      file:///*
+// @updateURL    https://raw.githubusercontent.com/junchengdu57-dev/DJtools/main/CsgoWebTool.user.js
+// @downloadURL  https://raw.githubusercontent.com/junchengdu57-dev/DJtools/main/CsgoWebTool.user.js
 // @connect      work.cqdev.top
 // @connect      172.16.1.77
 // @connect      jira.transsion.com
