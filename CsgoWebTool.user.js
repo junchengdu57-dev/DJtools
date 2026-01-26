@@ -33,10 +33,10 @@
 
     // Mobiwire 配置
     const MW_URLS = {
-        base: "https://www.mobiwire.com.cn",
-        init: "https://www.mobiwire.com.cn/",
-        login: "https://www.mobiwire.com.cn/login.asp",
-        query: "https://www.mobiwire.com.cn/query.asp"
+        base: "https://www.mobiwire.com.cn/query",
+        init: "https://www.mobiwire.com.cn/query/Logon.asp",
+        login: "https://www.mobiwire.com.cn/query/CheckLogin.asp",
+        query: "https://www.mobiwire.com.cn/query/OneRDsalary.asp"
     };
 
     // Jira 配置
@@ -227,7 +227,7 @@
                     for (let line of lines) {
                         if (line.toLowerCase().startsWith('location:')) {
                             redirectUrl = line.substring(9).trim();
-                            if (redirectUrl && !redirectUrl.startsWith('http')) redirectUrl = `${MW_URLS.base.replace('/query','')}/${redirectUrl}`;
+                            if (redirectUrl && !redirectUrl.startsWith('http')) redirectUrl = `${MW_URLS.base}/${redirectUrl}`;
                             break;
                         }
                     }
@@ -240,6 +240,85 @@
         });
     }
 
+    function request(stepName, opts) {
+        return new Promise((resolve, reject) => {
+            const headers = opts.headers || {};
+            const cookie = getMwCookieStr();
+            if (cookie) headers["Cookie"] = cookie;
+            opts.redirect = 'manual';
+            GM_xmlhttpRequest({
+                method: opts.method || "GET",
+                url: opts.url,
+                data: opts.data,
+                headers: headers,
+                redirect: 'manual',
+                responseType: "arraybuffer",
+                anonymous: true,
+                onload: (res) => {
+                    updateCookies(res.responseHeaders);
+                    let redirectUrl = null;
+                    const lines = res.responseHeaders.split(/[\r\n]+/);
+                    for (let line of lines) {
+                        if (line.toLowerCase().startsWith('location:')) {
+                            redirectUrl = line.substring(9).trim();
+                            if (redirectUrl && !redirectUrl.startsWith('http')) {
+                                redirectUrl = `${MW_URLS.base}/${redirectUrl}`;
+                            }
+                            break;
+                        }
+                    }
+                    let text = "";
+                    try { const decoder = new TextDecoder("gbk"); text = decoder.decode(res.response); } catch (e) { text = "解码失败"; }
+                    resolve({ status: res.status, text: text, redirectUrl: redirectUrl });
+                },
+                onerror: (err) => reject(`[${stepName}] 网络错误`)
+            });
+        });
+    }
+
+    async function step1_init() { COOKIE_JAR = {}; try { await request("INIT", { url: MW_URLS.init }); return true; } catch (e) { return false; } }
+    async function step2_login(empno, password) {
+        const params = new URLSearchParams();
+        params.append("screenwidth", "1536");
+        params.append("empno", empno);
+        params.append("image.x", "37");
+        params.append("image.y", "26");
+        params.append("Password", password);
+        params.append("Type", "Salary");
+        const res = await request("LOGIN", { method: "POST", url: MW_URLS.login, data: params.toString(), headers: { "Content-Type": "application/x-www-form-urlencoded", "Referer": MW_URLS.init, "Origin": "https://www.mobiwire.com.cn" } });
+        if (res.status === 302 || res.status === 301) { return res.redirectUrl; }
+        return null;
+    }
+    async function step3_follow(url) { await request("FOLLOW", { url: url, headers: { "Referer": MW_URLS.login } }); return url; }
+    async function step4_query(year, month, refererUrl) {
+        const url = `${MW_URLS.query}?txt_year=${year}&txt_mon=${month}`;
+        const res = await request("QUERY", { url: url, headers: { "Referer": refererUrl } });
+        if (res.text.includes("用户登录") || res.text.length < 500) { return { error: "Session失效" }; }
+        const parser = new DOMParser(); const doc = parser.parseFromString(res.text, "text/html");
+        let monthData = {}; let hasData = false;
+        const tds = doc.querySelectorAll('td');
+        const excludeKeys = ["项目名称", "金额", "汇总部分", "明细部分", "工资项说明", "工资总额", "关闭", "薪资明细"];
+        for (let i = 0; i < tds.length; i++) {
+            let key = tds[i].innerText.replace(/\s+/g, '').trim();
+            if (key.length > 15 || excludeKeys.some(k => key.includes(k)) || !key) continue;
+            const nextTd = tds[i].nextElementSibling;
+            if (nextTd) {
+                const valStr = nextTd.innerText.replace(/,/g, '').trim();
+                if (/^-?\d+(\.\d+)?$/.test(valStr)) {
+                    const val = parseFloat(valStr);
+                    if (key.includes("银行转账")) key = "实发工资(银行转账)";
+                    if (key.includes("住房公积金")) key = "住房公积金";
+                    if (key.includes("养老保险")) key = "养老保险";
+                    if (key.includes("医疗保险")) key = "医疗保险";
+                    if (key.includes("失业保险")) key = "失业保险";
+                    if (key.includes("应发薪资")) key = "应发薪资";
+                    monthData[key] = val; hasData = true;
+                }
+            }
+        }
+        return { hasData, data: monthData };
+    }
+
     async function executeMobiwireFlow() {
         const logBox = document.getElementById('mw-log');
         const btn = document.getElementById('btn-load-salary');
@@ -248,83 +327,45 @@
         const year = document.getElementById('mw-year').value;
         const start = parseInt(document.getElementById('mw-start').value);
         const end = parseInt(document.getElementById('mw-end').value);
-
         if(!mw.emp || !mw.pwd) { alert("请先在【账号设置】中配置Mobiwire工号和密码"); return; }
         const log = (msg) => { logBox.innerHTML += `<div>${msg}</div>`; logBox.scrollTop = logBox.scrollHeight; };
-
-        btn.disabled = true; logBox.innerHTML = "> 🚀 初始化连接...<br>";
-        COOKIE_JAR = {};
-
-        try {
-            await mwRequest("INIT", { url: MW_URLS.init });
-            const params = new URLSearchParams();
-            params.append("screenwidth", "1536"); params.append("empno", mw.emp);
-            params.append("image.x", "37"); params.append("image.y", "26");
-            params.append("Password", mw.pwd); params.append("Type", "Salary");
-
-            const loginRes = await mwRequest("LOGIN", {
-                method: "POST", url: MW_URLS.login, data: params.toString(),
-                headers: { "Content-Type": "application/x-www-form-urlencoded", "Referer": MW_URLS.init, "Origin": "https://www.mobiwire.com.cn" }
-            });
-
-            if (!loginRes.redirectUrl) { log("❌ 登录失败，请检查账号密码"); btn.disabled = false; return; }
-            await mwRequest("FOLLOW", { url: loginRes.redirectUrl, headers: { "Referer": MW_URLS.login } });
-            log("✅ 登录成功，开始抓取...");
-
-            let allMonthsData = []; let allKeys = new Set(["月份", "应发薪资", "实发工资(银行转账)"]);
-            for(let m=start; m<=end; m++) {
-                log(`📡 扫描 ${m}月...`);
-                const qUrl = `${MW_URLS.query}?txt_year=${year}&txt_mon=${m}`;
-                const res = await mwRequest("QUERY", { url: qUrl, headers: { "Referer": loginRes.redirectUrl } });
-
-                if (res.text.includes("用户登录") || res.text.length < 500) { log("⚠️ Session失效"); continue; }
-
-                const parser = new DOMParser(); const doc = parser.parseFromString(res.text, "text/html");
-                const tds = doc.querySelectorAll('td');
-                let monthData = { "月份": `${m}月` }; let hasData = false;
-                const exclude = ["项目名称", "金额", "汇总部分", "明细部分", "工资项说明", "工资总额", "关闭", "薪资明细"];
-
-                for (let i = 0; i < tds.length; i++) {
-                    let key = tds[i].innerText.replace(/\s+/g, '').trim();
-                    if (key.length > 15 || exclude.some(k => key.includes(k)) || !key) continue;
-                    const nextTd = tds[i].nextElementSibling;
-                    if (nextTd) {
-                        const valStr = nextTd.innerText.replace(/,/g, '').trim();
-                        if (/^-?\d+(\.\d+)?$/.test(valStr)) {
-                            if (key.includes("银行转账")) key = "实发工资(银行转账)";
-                            if (key.includes("应发薪资")) key = "应发薪资";
-                            monthData[key] = parseFloat(valStr); hasData = true;
-                            allKeys.add(key);
-                        }
-                    }
-                }
-                if(hasData) { allMonthsData.push(monthData); log(`✅ ${m}月数据获取成功`); }
-                else log(`⚪ ${m}月无数据`);
-                await new Promise(r => setTimeout(r, 400));
+        btn.disabled = true; logBox.innerHTML = "> 🚀 初始化...<br>";
+        if (!await step1_init()) { btn.disabled = false; return; }
+        const redirectUrl = await step2_login(mw.emp, mw.pwd);
+        if (!redirectUrl) { log("❌ 登录失败"); btn.disabled = false; return; }
+        const finalReferer = await step3_follow(redirectUrl);
+        log("✅ 登录成功，开始采集全量数据...");
+        let allMonthsData = []; let allKeys = new Set(["月份", "应发薪资", "实发工资(银行转账)"]);
+        for(let m=start; m<=end; m++) {
+            log(`📡 扫描 ${m}月明细...`);
+            const res = await step4_query(year, m, finalReferer);
+            if(res.error) { log(`⚠️ ${m}月 Session失效`); continue; }
+            if(res.hasData) {
+                res.data["月份"] = `${m}月`;
+                Object.keys(res.data).forEach(k => allKeys.add(k));
+                allMonthsData.push(res.data);
+                const net = res.data["实发工资(银行转账)"] || 0;
+                log(`✅ ${m}月 实发: ${net}`);
+            } else {
+                log(`⚪ ${m}月: 无数据`);
             }
-
-            if(allMonthsData.length === 0) { log("❌ 未找到数据"); btn.disabled = false; return; }
-
-            const headers = Array.from(allKeys);
-            let csv = "\uFEFF" + headers.join(",") + "\n";
-            allMonthsData.forEach(row => {
-                csv += headers.map(h => row[h] !== undefined ? row[h] : 0).join(",") + "\n";
-            });
-            let totalRow = ["总计"], avgRow = ["平均"];
-            for (let i = 1; i < headers.length; i++) {
-                let sum = 0, count = 0;
-                allMonthsData.forEach(row => { if(typeof row[headers[i]]==='number'){ sum+=row[headers[i]]; count++; } });
-                totalRow.push(sum.toFixed(2)); avgRow.push(count ? (sum/count).toFixed(2) : "0.00");
-            }
-            csv += totalRow.join(",") + "\n" + avgRow.join(",") + "\n";
-
-            const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = `Mobiwire薪资_${year}.csv`;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            log("🏆 报表已下载！");
-
-        } catch(e) { console.error(e); log("❌ 发生错误"); }
+            await new Promise(r => setTimeout(r, 400));
+        }
+        if (allMonthsData.length === 0) { log("❌ 没有查询到任何数据"); btn.disabled = false; return; }
+        const headers = Array.from(allKeys);
+        let csvContent = "\uFEFF" + headers.join(",") + "\n";
+        allMonthsData.forEach(row => { const line = headers.map(h => row[h] !== undefined ? row[h] : 0); csvContent += line.join(",") + "\n"; });
+        let totalRow = ["总计"], avgRow = ["平均"];
+        for (let i = 1; i < headers.length; i++) {
+            const key = headers[i]; let sum = 0; let count = 0;
+            allMonthsData.forEach(row => { const val = row[key]; if (typeof val === 'number') { sum += val; count++; } });
+            totalRow.push(sum.toFixed(2)); avgRow.push(count > 0 ? (sum / count).toFixed(2) : "0.00");
+        }
+        csvContent += totalRow.join(",") + "\n" + avgRow.join(",") + "\n";
+        const blob = new Blob([csvContent], {type:'text/csv;charset=utf-8'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `Mobiwire薪资_${year}.csv`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
         btn.disabled = false;
     }
 
@@ -352,12 +393,12 @@
                     onerror: () => reject("网络错误")
                 });
             });
-            
+
             const json = JSON.parse(response);
             let summary = json.fields.summary || "";
             let jiraProject = json.fields.project ? json.fields.project.name : "";
             if (!jiraProject && bugId.includes("-")) jiraProject = bugId.split("-")[0];
-            
+
             // ★★★ V42.4 新增：自动获取bug处理的开始和结束日期 ★★★
             if (json.fields.created) {
                 const startDate = json.fields.created.split('T')[0];
@@ -367,15 +408,15 @@
             if (endDate) {
                 document.getElementById('add-end').value = endDate.split('T')[0];
             }
-            
+
             // ★★★ V42.4 修复：增强项目模糊匹配逻辑（双向匹配+前缀匹配） ★★★
             if (jiraProject) {
                 const jiraProjUpper = jiraProject.toUpperCase();
-                let match = PROJECT_LIST_CACHE.find(p => 
-                    p.name.toUpperCase().includes(jiraProjUpper) || 
+                let match = PROJECT_LIST_CACHE.find(p =>
+                    p.name.toUpperCase().includes(jiraProjUpper) ||
                     jiraProjUpper.includes(p.name.toUpperCase())
                 );
-                
+
                 // 如果双向包含匹配失败，尝试前缀匹配
                 if (!match) {
                     const prefixMatch = jiraProjUpper.match(/^([A-Z]+[0-9]*)/);
@@ -384,7 +425,7 @@
                         match = PROJECT_LIST_CACHE.find(p => p.name.toUpperCase().startsWith(prefix));
                     }
                 }
-                
+
                 if (match) {
                     document.getElementById('add-proj-search').value = match.name;
                     document.getElementById('add-proj-id').value = match.id;
@@ -395,7 +436,7 @@
             } else {
                 statusCb("获取成功");
             }
-            
+
             return { summary, project: jiraProject };
         } catch(e) {
             // 如果REST API失败，回退到HTML解析方式（兼容旧逻辑）
@@ -419,15 +460,15 @@
                     const prefixRegex = /^$[.*?]$\s*/;
                     const summary = rawTitle.replace(prefixRegex, "").trim();
                     if (!jiraProject && bugId.includes("-")) jiraProject = bugId.split("-")[0];
-                    
+
                     // ★★★ V42.4 修复：HTML解析方式也支持项目模糊匹配 ★★★
                     if (jiraProject) {
                         const jiraProjUpper = jiraProject.toUpperCase();
-                        let match = PROJECT_LIST_CACHE.find(p => 
-                            p.name.toUpperCase().includes(jiraProjUpper) || 
+                        let match = PROJECT_LIST_CACHE.find(p =>
+                            p.name.toUpperCase().includes(jiraProjUpper) ||
                             jiraProjUpper.includes(p.name.toUpperCase())
                         );
-                        
+
                         if (!match) {
                             const prefixMatch = jiraProjUpper.match(/^([A-Z]+[0-9]*)/);
                             if (prefixMatch && prefixMatch[1].length >= 3) {
@@ -435,7 +476,7 @@
                                 match = PROJECT_LIST_CACHE.find(p => p.name.toUpperCase().startsWith(prefix));
                             }
                         }
-                        
+
                         if (match) {
                             document.getElementById('add-proj-search').value = match.name;
                             document.getElementById('add-proj-id').value = match.id;
@@ -446,7 +487,7 @@
                     } else {
                         statusCb("获取成功（HTML解析）");
                     }
-                    
+
                     return { summary, project: jiraProject };
                 } else throw new Error("解析失败");
             } catch(e2) {
@@ -666,7 +707,7 @@
                         <li><strong>面板显示优化</strong>：修复了轮盘点击后面板不显示的问题，确保QUERY模式下点击Q1/Q2/Q3/Q4/本月后面板正确显示，添加了面板显示状态的强制设置。</li>
                         <li><strong>表单滚动优化</strong>：为add-form添加overflow-y: auto和padding-right，确保表单内容过长时可以正常滚动查看。</li>
                     </ul>
-                    
+
                     <h3>📋 V42.7 修正版更新</h3>
                     <ul>
                         <li><strong>二级菜单点击修复</strong>：修复了二级菜单点击无响应的问题，添加了独立的click事件监听器处理二级菜单的点击操作，确保Q1/Q2/Q3/Q4/本月、提交/清空等功能正常响应。</li>
@@ -799,7 +840,7 @@
         searchInput.addEventListener('input', (e) => { renderProjectDropdown(e.target.value); dropdown.style.display = 'block'; });
         document.getElementById('btn-refresh-proj').onclick = () => fetchProjects(true);
         panel.addEventListener('click', (e) => { if (e.target !== searchInput && e.target.id !== 'btn-refresh-proj' && !dropdown.contains(e.target)) dropdown.style.display = 'none'; });
-        overlay.addEventListener('click', e => { 
+        overlay.addEventListener('click', e => {
             if (e.target === overlay) {
                 toggleOverlay(false);
             }
@@ -812,13 +853,13 @@
         // 版本说明书功能
         document.getElementById('btn-open-manual').onclick = () => modal.style.display = 'block';
         document.getElementById('close-manual').onclick = () => modal.style.display = 'none';
-        
+
         // 版本说明书拖动功能
         const manualHeader = document.getElementById('manual-header');
         let isDraggingManual = false;
         let manualDragStart = { x: 0, y: 0 };
         let manualStartPos = { left: 0, top: 0 };
-        
+
         manualHeader.addEventListener('mousedown', (e) => {
             if (e.target.id === 'close-manual' || e.target.closest('.close-manual')) return; // 关闭按钮不触发拖动
             isDraggingManual = true;
@@ -829,7 +870,7 @@
             manualStartPos.top = rect.top;
             e.preventDefault();
         });
-        
+
         document.addEventListener('mousemove', (e) => {
             if (isDraggingManual) {
                 const deltaX = e.clientX - manualDragStart.x;
@@ -839,11 +880,11 @@
                 modal.style.right = 'auto'; // 取消right定位
             }
         });
-        
+
         document.addEventListener('mouseup', () => {
             isDraggingManual = false;
         });
-        
+
         // 阻止modal内部点击事件冒泡（防止点击内容时关闭overlay和modal）
         modal.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -942,12 +983,12 @@
             currentMode = mode || currentMode;
             const data = MENUS[currentMode];
             const isAuth = checkAuthReady();
-            
+
             hub.innerHTML = `<span class="hub-text">${data.hub}</span>`;
-            
+
             while (svgMain.firstChild) svgMain.removeChild(svgMain.firstChild);
             labelsContainer.innerHTML = '';
-            
+
             let svgHtml = '', labelHtml = '';
 
             if (data.count === 1 && data.sectors[0].isBack) {
@@ -967,7 +1008,7 @@
             } else {
                 const step = 360 / data.count;
                 const sectors = currentMode === 'MENU' ? menuOrder.map(id => DEFAULT_MENUS.find(m => m.id === id)) : data.sectors;
-                
+
                 sectors.forEach((s, i) => {
                     if (!s) return;
                     const start = i * step;
@@ -980,7 +1021,7 @@
                     labelHtml += `<div id="lbl-${s.id}" class="wedge-label ${isDisabled?'disabled':''}" style="left:${pos.x - 40}px; top:${pos.y - 20}px"><div>${s.label}</div><div style="font-size:10px;opacity:0.7">${s.desc}</div></div>`;
                 });
             }
-            
+
             svgMain.innerHTML = svgHtml;
             labelsContainer.innerHTML = labelHtml;
 
@@ -999,7 +1040,7 @@
                 if(currentMode === 'TIMESHEET') alert("工时系统模块开发中...");
             }
         }
-        
+
         renderWheel('MENU');
 
         // ★★★ V42.6 恢复：拖拽与点击逻辑（支持二级菜单） ★★★
@@ -1122,13 +1163,13 @@
             document.querySelectorAll('.svg-sector').forEach(el => el.classList.remove('drag-target'));
         });
 
-        
+
 
         // ★★★ V42.6 修复：添加独立的click事件监听器处理二级菜单点击 ★★★
         sensor.addEventListener('click', (e) => {
             // 只在非主菜单模式下处理点击（二级菜单）
             if (currentMode === 'MENU') return; // 主菜单的点击由mouseup处理（支持拖拽）
-            
+
             // 重新计算点击的目标扇区（确保准确性）
             const rect = sensor.getBoundingClientRect();
             const x = e.clientX - rect.left - rect.width / 2;
@@ -1154,7 +1195,7 @@
             }
 
             if (!targetId) return;
-            
+
             const el = document.getElementById(`sec-${targetId}`);
             if (el && el.classList.contains('disabled')) {
                 alert("⚠️ 请先在[账号设置]中配置萨瑞系统账号");
@@ -1213,7 +1254,7 @@
             }
 
             if (!targetId) return;
-            
+
             const el = document.getElementById(`sec-${targetId}`);
             if (el && el.classList.contains('disabled')) {
                 alert("⚠️ 请先在[账号设置]中配置萨瑞系统账号");
@@ -1287,7 +1328,7 @@
                     const lbl = document.getElementById(`lbl-${targetId}`);
                     if(sec && !sec.classList.contains('disabled')) sec.classList.add('active');
                     if(lbl && !lbl.classList.contains('disabled')) lbl.classList.add('active');
-                    
+
                     if (currentMode === 'MENU') {
                         const item = DEFAULT_MENUS.find(m => m.id === targetId);
                         if(item) {
@@ -1397,13 +1438,13 @@
         const statusBar = document.getElementById('status-bar');
         const startDate = document.getElementById('cs-start').value;
         const endDate = document.getElementById('cs-end').value;
-        
+
         // ★★★ 修复：恢复V41的分页查询逻辑，确保获取所有数据
         let currentPage = 1; let hasMore = true; let allItems = [];
         const SCORE_RULES = { 'S': 32.0, 'A': 14.0, 'B': 7.2, 'C': 2.0, 'D': 1.0, 'E': 0.3 };
         let totalScore = 0, totalHours = 0;
         const counts = { 'S':0, 'A':0, 'B':0, 'C':0, 'D':0, 'E':0 };
-        
+
         try {
             while (hasMore) {
                 statusBar.innerText = `获取: ${currentPage}页`;
@@ -1418,7 +1459,7 @@
                 params.append('type', '');
                 params.append('bugNumber', '');
                 params.append('content', '');
-                
+
                 const responseText = await new Promise((resolve, reject) => {
                     GM_xmlhttpRequest({
                         method: "POST", url: API_DATA, headers: getHeaders(), data: params.toString(), withCredentials: true,
@@ -1429,7 +1470,7 @@
                         onerror: () => reject("Network Error")
                     });
                 });
-                
+
                 // ★★★ 修复：增加对HTML错误页的预判
                 if(responseText.trim().startsWith('<')) {
                     statusBar.innerText = "重连中...";
@@ -1442,7 +1483,7 @@
                         return;
                     }
                 }
-                
+
                 let resJson;
                 try {
                     resJson = JSON.parse(responseText);
@@ -1458,21 +1499,21 @@
                         return;
                     }
                 }
-                
+
                 if (resJson.code !== 1 || !resJson.data) {
                     hasMore = false;
                     break;
                 }
-                
+
                 // ★★★ 修复：兼容两种返回结构
                 const list = Array.isArray(resJson.data) ? resJson.data : (resJson.data.workLoadData || []);
                 const pageInfo = Array.isArray(resJson.data) ? null : (resJson.data.page || null);
-                
+
                 if (list.length === 0) {
                     hasMore = false;
                     break;
                 }
-                
+
                 // ★★★ 修复：恢复V41的积分计算逻辑（通过gradeName匹配等级，使用SCORE_RULES计算）
                 list.forEach(item => {
                     let matchedLevel = null;
@@ -1489,7 +1530,7 @@
                         const map = ['','S','A','B','C','D','E'];
                         matchedLevel = map[item.grade] || 'E';
                     }
-                    
+
                     if (matchedLevel && SCORE_RULES[matchedLevel] !== undefined) {
                         const score = SCORE_RULES[matchedLevel];
                         const hours = parseFloat(item.actualWorkHours) || parseFloat(item.workHours) || 0;
@@ -1499,7 +1540,7 @@
                         allItems.push(item);
                     }
                 });
-                
+
                 // 检查是否还有更多页
                 if (pageInfo) {
                     if (currentPage >= parseInt(pageInfo.totalPage || 1)) {
@@ -1512,13 +1553,13 @@
                     hasMore = false;
                 }
             }
-            
+
             // 更新显示
             document.getElementById('disp-score').innerText = totalScore.toFixed(1);
             document.getElementById('disp-hours').innerText = totalHours.toFixed(1) + 'h';
             Object.keys(counts).forEach(k => document.getElementById(`cnt-${k}`).innerText = counts[k]);
             statusBar.innerText = `✅ 成功: ${allItems.length} 条`;
-            
+
         } catch(e) {
             statusBar.innerText = "❌ 查询失败: " + e.message;
             console.error(e);
