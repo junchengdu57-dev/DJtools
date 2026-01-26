@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         工时统计助手 - CS:GO 全面战场 (V43.0)
 // @namespace    http://tampermonkey.net/
-// @version      43
-// @description  V42.8核心 + 轮盘修复 + 工时系统完成
+// @version      43.1
+// @description  新增工时系统
 // @match        *://*/*
 // @include      file:///*
 // @connect      work.cqdev.top
