@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         工时统计助手 - CS:GO (V43.3)
+// @name         工时统计助手 - CS:GO (V43.4)
 // @namespace    http://tampermonkey.net/
-// @version      43.3
-// @description  修复内网工作量系统访问不到
+// @version      43.4
+// @description  新增考勤统计模块
 // @match        *://*/*
 // @include      file:///*
 // @updateURL    https://raw.githubusercontent.com/junchengdu57-dev/DJtools/main/CsgoWebTool.user.js
@@ -23,7 +23,7 @@
 (function() {
     'use strict';
 
-    console.log("🔥 [CS:GO] V43.0 启动 - Core 43，作者DJ");
+    console.log("🔥 [CS:GO] V43.4 启动 - Core 43.4，作者DJ");
 
     // ================= V41 核心配置 (绝对保留) =================
     const DOMAIN_BASE = "http://work.cqdev.top";
@@ -47,7 +47,8 @@
         base: "https://www.mobiwire.com.cn/query",
         init: "https://www.mobiwire.com.cn/query/Logon.asp",
         login: "https://www.mobiwire.com.cn/query/CheckLogin.asp",
-        query: "https://www.mobiwire.com.cn/query/OneRDsalary.asp"
+        query: "https://www.mobiwire.com.cn/query/OneRDsalary.asp",
+        attend: "https://www.mobiwire.com.cn/query/COWA.asp"
     };
 
     // Jira 配置
@@ -378,6 +379,69 @@
         return { hasData, data: monthData };
     }
 
+    function calcOT(timeStr) {
+        if (!timeStr || !timeStr.includes(':')) return 0;
+        const parts = timeStr.split(':');
+        const h = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        if (h === 0 && m === 0) return 0;
+        const totalMin = h * 60 + m;
+        const standardMin = 17 * 60 + 30;
+        if (totalMin > standardMin) return parseFloat(((totalMin - standardMin) / 60).toFixed(2));
+        return 0;
+    }
+
+    async function queryAttendanceByMonth(year, month) {
+        const firstDay = `${year}-${month}-1`;
+        const lastDayObj = new Date(year, month, 0);
+        const lastDay = `${year}-${month}-${lastDayObj.getDate()}`;
+        const params = new URLSearchParams();
+        params.append("StartTime", firstDay.replace(/-/g, '/'));
+        params.append("EndTime", lastDay.replace(/-/g, '/'));
+        params.append("sel_yy", year);
+        params.append("sel_mm", month);
+        params.append("SearchType", "2");
+        params.append("image.x", "15");
+        params.append("image.y", "15");
+        const res = await request(`ATTEND_${year}_${month}`, { method: "POST", url: MW_URLS.attend, data: params.toString(), headers: { "Content-Type": "application/x-www-form-urlencoded", "Referer": MW_URLS.attend } });
+        if (res.text.includes("用户登录") || res.text.length < 500) return { error: "Session失效" };
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(res.text, "text/html");
+        const rows = doc.querySelectorAll('tr.TableTr1, tr.TableTr2');
+        let records = [];
+        rows.forEach(tr => {
+            const tds = tr.querySelectorAll('td');
+            if (tds.length >= 12) {
+                const date = tds[0].innerText.trim();
+                const schedule = tds[1].innerText.trim();
+                const shiftStart = tds[2].innerText.trim();
+                const shiftEnd = tds[3].innerText.trim();
+                const clockIn = tds[4].innerText.trim();
+                const clockOut = tds[5].innerText.trim();
+                let lateEarly = parseFloat(tds[6].innerText.trim()) || 0;
+                const noPayAbsence = parseFloat(tds[7].innerText.trim()) || 0;
+                const payAbsence = parseFloat(tds[8].innerText.trim()) || 0;
+                const paidOT = parseFloat(tds[9].innerText.trim()) || 0;
+                const actualHours = parseFloat(tds[10].innerText.trim()) || 0;
+                const meal = parseFloat(tds[11].innerText.trim()) || 0;
+                let cleanLate = lateEarly;
+                if (lateEarly === 480) cleanLate = 0;
+                const myOT = calcOT(clockOut);
+                records.push({ year, month, date, schedule, shiftStart, shiftEnd, clockIn, clockOut, lateEarly, cleanLate, noPayAbsence, payAbsence, paidOT, actualHours, meal, myOT });
+            }
+        });
+        return { hasData: records.length > 0, records };
+    }
+
+    function summarize(records) {
+        const count = records.length;
+        if (count === 0) return null;
+        const sums = { cleanLate: 0, noPayAbsence: 0, payAbsence: 0, paidOT: 0, actualHours: 0, meal: 0, myOT: 0 };
+        records.forEach(r => { sums.cleanLate += r.cleanLate; sums.noPayAbsence += r.noPayAbsence; sums.payAbsence += r.payAbsence; sums.paidOT += r.paidOT; sums.actualHours += r.actualHours; sums.meal += r.meal; sums.myOT += r.myOT; });
+        const avgs = {}; Object.keys(sums).forEach(k => { avgs[k] = (sums[k] / count).toFixed(2); sums[k] = sums[k].toFixed(2); });
+        return { count, sums, avgs };
+    }
+
     async function executeMobiwireFlow() {
         const logBox = document.getElementById('mw-log');
         const btn = document.getElementById('btn-load-salary');
@@ -423,8 +487,135 @@
         csvContent += totalRow.join(",") + "\n" + avgRow.join(",") + "\n";
         const blob = new Blob([csvContent], {type:'text/csv;charset=utf-8'});
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = `Mobiwire薪资_${year}.csv`;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        log(`<a href="${url}" download="Mobiwire薪资_${year}.csv" style="color:yellow">📥 下载薪资报表</a>`);
+        btn.disabled = false;
+    }
+
+    async function executeAttendanceFlow() {
+        const logBox = document.getElementById('att-log');
+        const btn = document.getElementById('btn-load-attendance');
+        if (btn && btn.disabled) return;
+        const auth = JSON.parse(GM_getValue(STORAGE_KEY_AUTH, '{}'));
+        const mw = auth.mobiwire || {};
+        if(!mw.emp || !mw.pwd) { alert("请先在【账号设置】中配置Mobiwire工号和密码"); return; }
+        const log = (msg) => { logBox.innerHTML += `<div>${msg}</div>`; logBox.scrollTop = logBox.scrollHeight; };
+        btn.disabled = true; logBox.innerHTML = "> 🚀 初始化...<br>";
+        if (!await step1_init()) { log("❌ 初始化失败"); btn.disabled = false; return; }
+        const redirectUrl = await step2_login(mw.emp, mw.pwd);
+        if (!redirectUrl) { log("❌ 登录失败"); btn.disabled = false; return; }
+        await step3_follow(redirectUrl);
+        const sVal = document.getElementById('att-start').value;
+        const eVal = document.getElementById('att-end').value;
+        const sDate = new Date(sVal);
+        const eDate = new Date(eVal);
+        if(isNaN(sDate.getTime()) || isNaN(eDate.getTime()) || sDate > eDate) { alert("日期范围无效"); btn.disabled = false; return; }
+        let recordsAll = [];
+        let totalMyOT = 0, totalCleanLateMin = 0, totalMeal = 0;
+        let y = sDate.getFullYear(), m = sDate.getMonth() + 1;
+        const endY = eDate.getFullYear(), endM = eDate.getMonth() + 1;
+        while (y < endY || (y === endY && m <= endM)) {
+            const res = await queryAttendanceByMonth(y, m);
+            if (res.error) { log(`⚠️ ${y}-${m} Session失效`); }
+            else if (res.hasData) {
+                recordsAll.push(...res.records);
+                const sums = summarize(res.records);
+                const monthMyOT = parseFloat(sums.sums.myOT);
+                const monthLateMin = parseFloat(sums.sums.cleanLate);
+                const monthMeal = parseFloat(sums.sums.meal);
+                totalMyOT += monthMyOT; totalCleanLateMin += monthLateMin; totalMeal += monthMeal;
+                log(`📈 ${y}-${m} 月加班 ${monthMyOT}h | 净迟到 ${monthLateMin}分钟 | 餐补 ${monthMeal} 元`);
+            }
+            else { log(`⚪ ${y}-${m} 无数据`); }
+            m++; if (m === 13) { m = 1; y++; }
+            await new Promise(r => setTimeout(r, 400));
+        }
+        if (recordsAll.length === 0) { log("❌ 没有任何考勤数据"); btn.disabled = false; return; }
+        const sumAll = summarize(recordsAll);
+        log(`🏁 累计加班 ${totalMyOT.toFixed(2)}h | 累计净迟到 ${totalCleanLateMin}分钟 | 累计餐补 ${totalMeal} 元`);
+        
+        // 生成CSV数据
+        const monthGroups = {};
+        recordsAll.forEach(r => { const k = `${r.year}-${String(r.month).padStart(2,'0')}`; (monthGroups[k] = monthGroups[k] || []).push(r); });
+        const headersMonthly = ["月份","天数","净迟到","旷工不计薪","旷工计薪","加班计薪","实际时长","餐补","我的加班"];
+        const headersDaily = ["年份","月份","日期","班次","班次起","班次止","打卡上班","打卡下班","迟到早退","净迟到","旷工不计薪","旷工计薪","加班计薪","实际时长","餐补","我的加班"];
+        let csv = "\uFEFF";
+        csv += ["总览","记录数",sumAll.count,"净迟到",sumAll.sums.cleanLate,"旷工不计薪",sumAll.sums.noPayAbsence,"旷工计薪",sumAll.sums.payAbsence,"加班计薪",sumAll.sums.paidOT,"实际时长",sumAll.sums.actualHours,"餐补",sumAll.sums.meal,"我的加班",sumAll.sums.myOT].join(",") + "\n";
+        csv += ["平均","-","-","净迟到",sumAll.avgs.cleanLate,"旷工不计薪",sumAll.avgs.noPayAbsence,"旷工计薪",sumAll.avgs.payAbsence,"加班计薪",sumAll.avgs.paidOT,"实际时长",sumAll.avgs.actualHours,"餐补",sumAll.avgs.meal,"我的加班",sumAll.avgs.myOT].join(",") + "\n";
+        csv += headersMonthly.join(",") + "\n";
+        Object.keys(monthGroups).sort().forEach(k => {
+            const s = summarize(monthGroups[k]);
+            csv += [k, s.count, s.sums.cleanLate, s.sums.noPayAbsence, s.sums.payAbsence, s.sums.paidOT, s.sums.actualHours, s.sums.meal, s.sums.myOT].join(",") + "\n";
+        });
+        csv += headersDaily.join(",") + "\n";
+        recordsAll.forEach(r => {
+            csv += [r.year, r.month, r.date, r.schedule, r.shiftStart, r.shiftEnd, r.clockIn, r.clockOut, r.lateEarly, r.cleanLate, r.noPayAbsence, r.payAbsence, r.paidOT, r.actualHours, r.meal, r.myOT].join(",") + "\n";
+        });
+        
+        // 在界面上显示表格预览和下载按钮
+        const nameStart = `${sDate.getFullYear()}${String(sDate.getMonth()+1).padStart(2,'0')}`;
+        const nameEnd = `${eDate.getFullYear()}${String(eDate.getMonth()+1).padStart(2,'0')}`;
+        const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+        const url = URL.createObjectURL(blob);
+        
+        // 创建表格预览区域
+        let tableHtml = `<div style="margin-top:15px; padding:10px; background:#1a1a1a; border-radius:4px; border:1px solid #444;">
+            <div style="color:#eab543; font-weight:bold; margin-bottom:10px;">📊 考勤统计汇总</div>
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:10px;">
+                <div style="text-align:center; padding:8px; background:#222; border-radius:4px;">
+                    <div style="color:#888; font-size:12px;">累计加班</div>
+                    <div style="color:#eab543; font-size:18px; font-weight:bold;">${totalMyOT.toFixed(2)}h</div>
+                </div>
+                <div style="text-align:center; padding:8px; background:#222; border-radius:4px;">
+                    <div style="color:#888; font-size:12px;">累计净迟到</div>
+                    <div style="color:#eab543; font-size:18px; font-weight:bold;">${totalCleanLateMin}分钟</div>
+                </div>
+                <div style="text-align:center; padding:8px; background:#222; border-radius:4px;">
+                    <div style="color:#888; font-size:12px;">累计餐补</div>
+                    <div style="color:#eab543; font-size:18px; font-weight:bold;">${totalMeal}元</div>
+                </div>
+            </div>
+            <div style="max-height:200px; overflow-y:auto; margin-bottom:10px;">
+                <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                    <thead>
+                        <tr style="background:#222; color:#eab543;">
+                            <th style="padding:6px; border:1px solid #444; text-align:left;">月份</th>
+                            <th style="padding:6px; border:1px solid #444; text-align:right;">天数</th>
+                            <th style="padding:6px; border:1px solid #444; text-align:right;">净迟到</th>
+                            <th style="padding:6px; border:1px solid #444; text-align:right;">我的加班</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+        Object.keys(monthGroups).sort().forEach(k => {
+            const s = summarize(monthGroups[k]);
+            tableHtml += `<tr style="border-bottom:1px solid #333;">
+                <td style="padding:6px; color:#ccc;">${k}</td>
+                <td style="padding:6px; text-align:right; color:#ccc;">${s.count}</td>
+                <td style="padding:6px; text-align:right; color:#ccc;">${s.sums.cleanLate}分钟</td>
+                <td style="padding:6px; text-align:right; color:#ccc;">${s.sums.myOT}h</td>
+            </tr>`;
+        });
+        tableHtml += `</tbody></table></div>
+            <button id="btn-download-attendance" class="action-btn" style="width:100%; margin-top:10px;">📥 下载考勤统计表格</button>
+        </div>`;
+        
+        log(tableHtml);
+        
+        // 绑定下载按钮
+        setTimeout(() => {
+            const downloadBtn = document.getElementById('btn-download-attendance');
+            if (downloadBtn) {
+                downloadBtn.onclick = () => {
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Mobiwire考勤_${nameStart}-${nameEnd}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    log("✅ 考勤统计表格已下载");
+                };
+            }
+        }, 100);
+        
         btn.disabled = false;
     }
 
@@ -582,6 +773,9 @@
         .view-container { display: flex; flex-direction: column; height: 100%; transition: opacity 0.2s; width: 100%; overflow-y: auto; }
         .view-container.hidden { display: none; opacity: 0; }
         .panel-header { font-size: 24px; color: #eab543; margin-bottom: 20px; border-bottom: 1px solid #555; padding-bottom: 10px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .tab-bar { display:flex; gap:8px; margin-bottom:10px; justify-content:center; align-items:center; }
+        .tab-btn { background:#333; border:1px solid #555; color:#aaa; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:13px; }
+        .tab-btn.active { background:#eab543; color:#000; border-color:#eab543; }
         /* 1. 普通输入框保持不变 */
         .cs-input, .add-input, .add-textarea { background: #111; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 4px; font-family: 'Microsoft YaHei'; cursor: text !important; width: 100%; color-scheme: dark; font-size: 14px; box-sizing: border-box; }
         /* 2. 下拉框单独设置（减小内边距，防止文字被切） */
@@ -662,7 +856,7 @@
                             <div id="wheel-labels"></div>
                         </div>
                     </div>
-                    <button id="btn-open-manual" class="manual-btn">📘 版本说明书 (V43)</button>
+                    <button id="btn-open-manual" class="manual-btn">📘 版本说明书 (V43.4)</button>
                 </div>
 
                 <div class="info-panel" id="panel-right" style="opacity:0; pointer-events:none;">
@@ -712,8 +906,12 @@
                     </div>
 
                     <div id="view-salary" class="view-container hidden">
-                        <div class="panel-header"><div>💰 薪资报表 (Mobiwire)</div><div style="font-size:12px;color:#666;">core 43，作者DJ</div></div>
-                        <div style="text-align:center; padding: 20px;">
+                        <div class="panel-header"><div>💰 薪资/考勤查询 (Mobiwire)</div><div style="font-size:12px;color:#666;">core 43，作者DJ</div></div>
+                        <div class="tab-bar">
+                            <button id="tab-salary" class="tab-btn active">查询薪资</button>
+                            <button id="tab-att" class="tab-btn">查询考勤</button>
+                        </div>
+                        <div id="mw-salary-panel" style="text-align:center; padding: 20px;">
                             <div style="display:flex; gap:12px; justify-content:center; margin-bottom:15px; align-items:center;">
                                 <span>年份</span>
                                 <input type="number" id="mw-year" value="${new Date().getFullYear()}" class="cs-input" style="width:80px; height:28px; padding:4px 8px;">
@@ -721,10 +919,27 @@
                                 <span>至</span>
                                 <select id="mw-end" class="add-select" style="width:90px; height:28px; padding:4px 8px;">${makeMonthOpts(12)}</select>
                             </div>
-                            <button id="btn-load-salary" class="action-btn">生成全能报表</button>
+                            <button id="btn-load-salary" class="action-btn">生成薪资报表</button>
                             <div id="mw-log" style="color:#888; font-size:12px; margin-top:10px; text-align:left; height:300px; overflow-y:auto; background:#111; padding:10px; border-radius:4px;">等待查询...</div>
                         </div>
+                        <div id="mw-att-panel" style="text-align:center; padding:20px; display:none;">
+                            <div style="display:flex; gap:10px; align-items:center; margin:10px 0; justify-content:center;">
+                                <label class="form-label" style="display:inline-block;">快捷年份</label>
+                                <input type="number" id="att-year" value="${new Date().getFullYear()}" class="cs-input" style="width:80px; height:28px; padding:4px 8px;">
+                                <button id="btn-att-set-year" class="sub-btn" style="height:28px; padding:0 14px; line-height:28px; width:100px; display:inline-block;">选中全年</button>
+                            </div>
+                            <div style="display:flex; gap:12px; align-items:center; margin-bottom:10px; justify-content:center;">
+                                <label class="form-label" style="display:inline-block; margin-right:6px;">开始日期</label>
+                                <input type="date" id="att-start" class="cs-input" style="height:28px; padding:4px 8px; width:130px;">
+                                <label class="form-label" style="display:inline-block; margin:0 6px;">结束日期</label>
+                                <input type="date" id="att-end" class="cs-input" style="height:28px; padding:4px 8px; width:130px;">
+                            </div>
+                            <button id="btn-load-attendance" class="action-btn">生成考勤统计表</button>
+                            <div id="att-log" style="color:#888; font-size:12px; margin-top:10px; text-align:left; height:300px; overflow-y:auto; background:#111; padding:10px; border-radius:4px;">等待查询...</div>
+                        </div>
                     </div>
+
+                    
 
                     <div id="view-settings" class="view-container hidden">
                         <div class="panel-header"><div>⚙️ 账号设置</div><div style="font-size:12px;color:#666;">core 43，作者DJ</div></div>
@@ -757,11 +972,15 @@
             </div>
 
             <div id="manual-modal">
-                <div class="manual-header" id="manual-header"><h2>📘 战术指挥官操作手册 V43.0</h2><div class="close-manual" id="close-manual">×</div></div>
+                <div class="manual-header" id="manual-header"><h2>📘 战术指挥官操作手册 V43.4</h2><div class="close-manual" id="close-manual">×</div></div>
                 <div class="manual-content">
+                    <h3>✌ V43.4 版本更新</h3>
+                    <ul>
+                        <li><strong>加入考勤功能</strong>可在查薪资/考勤下，查询考勤、加班时长等信息，可下载报表</li>
+                    </ul>
                     <h3>✌ V43.0 修正版更新</h3>
                     <ul>
-
+                        <li><strong>工作量内网查询修复</strong>修复内网工作量网站登录的用户查询不到工作量问题</li>
                     </ul>
                     <h3>🏆 V42.8 修正版更新</h3>
                     <ul>
@@ -898,7 +1117,7 @@
         const dropdown = document.getElementById('proj-dropdown');
         const modal = document.getElementById('manual-modal');
 
-        ['click', 'mousedown', 'mouseup', 'keydown', 'keyup'].forEach(evt => panel.addEventListener(evt, e => e.stopPropagation()));
+        ['mousedown', 'mouseup', 'keydown', 'keyup'].forEach(evt => panel.addEventListener(evt, e => e.stopPropagation()));
         searchInput.addEventListener('click', () => { renderProjectDropdown(searchInput.value); dropdown.style.display = 'block'; });
         searchInput.addEventListener('input', (e) => { renderProjectDropdown(e.target.value); dropdown.style.display = 'block'; });
         document.getElementById('btn-refresh-proj').onclick = () => fetchProjects(true);
@@ -958,12 +1177,39 @@
         document.getElementById('cs-end').value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
         document.getElementById('add-start').value = now.toISOString().split('T')[0];
         document.getElementById('add-end').value = now.toISOString().split('T')[0];
+        const attStartEl = document.getElementById('att-start');
+        const attEndEl = document.getElementById('att-end');
+        if (attStartEl && attEndEl) {
+            attStartEl.value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+            attEndEl.value = now.toISOString().split('T')[0];
+        }
 
         // 绑定按钮事件
         document.getElementById('btn-buy').onclick = queryWorkload;
         document.getElementById('btn-save-cfg').onclick = saveSettings;
         document.getElementById('btn-clear-hist').onclick = clearHistory;
+        
         document.getElementById('btn-load-salary').onclick = executeMobiwireFlow;
+        const tabSalary = document.getElementById('tab-salary');
+        const tabAtt = document.getElementById('tab-att');
+        if (tabSalary && tabAtt) {
+            tabSalary.onclick = () => toggleMwTabs('salary');
+            tabAtt.onclick = () => toggleMwTabs('att');
+        }
+        Array.from(document.querySelectorAll('#btn-att-set-year')).forEach(el => {
+            el.onclick = () => {
+                const panel = el.closest('.view-container') || document;
+                const yInput = panel.querySelector('#att-year');
+                const sInput = panel.querySelector('#att-start');
+                const eInput = panel.querySelector('#att-end');
+                const y = parseInt(yInput && yInput.value, 10);
+                if (!isNaN(y)) {
+                    if (sInput) sInput.value = `${y}-01-01`;
+                    if (eInput) eInput.value = `${y}-12-31`;
+                }
+            };
+        });
+        Array.from(document.querySelectorAll('#btn-load-attendance')).forEach(el => { el.onclick = executeAttendanceFlow; });
         document.getElementById('btn-fetch-jira').onclick = () => fetchJiraInfo(document.getElementById('add-bug').value.trim(), 'INT', (m)=>document.getElementById('add-status').innerText=m).then(fillJira);
         document.getElementById('btn-fetch-ex').onclick = () => fetchJiraInfo(document.getElementById('add-bug').value.trim(), 'EX', (m)=>document.getElementById('add-status').innerText=m).then(fillJira);
         document.getElementById('btn-submit-work').onclick = submitWorkloadAction;
@@ -979,12 +1225,36 @@
         initWheel();
     }
 
+    function toggleMwTabs(which) {
+        const tabSalary = document.getElementById('tab-salary');
+        const tabAtt = document.getElementById('tab-att');
+        const panelSalary = document.getElementById('mw-salary-panel');
+        const panelAtt = document.getElementById('mw-att-panel');
+        if (!tabSalary || !tabAtt || !panelSalary || !panelAtt) return;
+        if (which === 'salary') {
+            tabSalary.classList.add('active');
+            tabAtt.classList.remove('active');
+            panelSalary.style.display = 'block';
+            panelAtt.style.display = 'none';
+        } else {
+            tabAtt.classList.add('active');
+            tabSalary.classList.remove('active');
+            panelAtt.style.display = 'block';
+            panelSalary.style.display = 'none';
+            const now = new Date();
+            const s = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+            const e = now.toISOString().split('T')[0];
+            const attS = document.getElementById('att-start');
+            const attE = document.getElementById('att-end');
+            if (attS && attE) { attS.value = s; attE.value = e; }
+        }
+    }
     // ================= 轮盘逻辑 (V42.6 恢复二级菜单) =================
     const DEFAULT_MENUS = [
         { id: 'query', label: '工作量统计', desc: 'Stats', locked: true },
         { id: 'add', label: '填写工作量', desc: 'Add Work', locked: true },
         { id: 'history', label: '历史记录', desc: 'History', locked: true },
-        { id: 'salary', label: '薪资报表', desc: 'Salary', locked: true },
+        { id: 'salary', label: '薪资/考勤查询', desc: 'Salary', locked: true },
         { id: 'settings', label: '账号设置', desc: 'Account', locked: false },
         { id: 'jira', label: '跳转Jira', desc: 'Intranet', locked: false },
         { id: 'jira-ex', label: '跳转Ex', desc: 'Extranet', locked: false },
@@ -996,7 +1266,7 @@
         'MENU': {
             sectors: DEFAULT_MENUS,
             hub: 'MENU',
-            count: 8
+            count: DEFAULT_MENUS.length
         },
         'QUERY': {
             sectors: [
@@ -1021,6 +1291,7 @@
         'SETTINGS': { sectors: [{ id: 'back', label: '返回', desc: 'Back', isBack: true }], hub: 'BACK', count: 1 },
         'HISTORY': { sectors: [{ id: 'back', label: '返回', desc: 'Back', isBack: true }], hub: 'BACK', count: 1 },
         'SALARY': { sectors: [{ id: 'back', label: '返回', desc: 'Back', isBack: true }], hub: 'BACK', count: 1 },
+        'ATTENDANCE': { sectors: [{ id: 'back', label: '返回', desc: 'Back', isBack: true }], hub: 'BACK', count: 1 },
         'TIMESHEET': { sectors: [{ id: 'back', label: '返回', desc: 'Back', isBack: true }], hub: 'BACK', count: 1 }
     };
 
@@ -1101,6 +1372,7 @@
                 if(currentMode === 'SETTINGS') { document.getElementById('view-settings').classList.remove('hidden'); loadSettings(); }
                 if(currentMode === 'HISTORY') { document.getElementById('view-history').classList.remove('hidden'); renderHistory(); }
                 if(currentMode === 'SALARY') document.getElementById('view-salary').classList.remove('hidden');
+                if(currentMode === 'ATTENDANCE') document.getElementById('view-attendance').classList.remove('hidden');
                 if(currentMode === 'TIMESHEET') alert("工时系统模块开发中...");
             }
         }
