@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         工时统计助手 - CS:GO (V43.4)
+// @name         工时统计助手 - CS:GO (V43.5)
 // @namespace    http://tampermonkey.net/
-// @version      43.4
+// @version      43.5
 // @description  新增考勤统计模块
 // @match        *://*/*
 // @include      file:///*
@@ -23,7 +23,7 @@
 (function() {
     'use strict';
 
-    console.log("🔥 [CS:GO] V43.4 启动 - Core 43.4，作者DJ");
+    console.log("🔥 [CS:GO] V43.5 启动 - Core 43.5，作者DJ");
 
     // ================= V41 核心配置 (绝对保留) =================
     const DOMAIN_BASE = "http://work.cqdev.top";
@@ -856,7 +856,7 @@
                             <div id="wheel-labels"></div>
                         </div>
                     </div>
-                    <button id="btn-open-manual" class="manual-btn">📘 版本说明书 (V43.4)</button>
+                    <button id="btn-open-manual" class="manual-btn">📘 版本说明书 (V43.5)</button>
                 </div>
 
                 <div class="info-panel" id="panel-right" style="opacity:0; pointer-events:none;">
@@ -972,9 +972,9 @@
             </div>
 
             <div id="manual-modal">
-                <div class="manual-header" id="manual-header"><h2>📘 战术指挥官操作手册 V43.4</h2><div class="close-manual" id="close-manual">×</div></div>
+                <div class="manual-header" id="manual-header"><h2>📘 战术指挥官操作手册 V43.5</h2><div class="close-manual" id="close-manual">×</div></div>
                 <div class="manual-content">
-                    <h3>✌ V43.4 版本更新</h3>
+                    <h3>✌ V43.5 版本更新</h3>
                     <ul>
                         <li><strong>加入考勤功能</strong>可在查薪资/考勤下，查询考勤、加班时长等信息，可下载报表</li>
                     </ul>
