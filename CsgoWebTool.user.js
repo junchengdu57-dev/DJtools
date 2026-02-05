@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         工时统计助手 - CS:GO UI轮盘版 (V44.0)
+// @name         工时统计助手 - CS:GO UI轮盘版 (V44.1)
 // @namespace    http://tampermonkey.net/
-// @version      44.0.1
+// @version      44.1
 // @description  新增工时系统模块
 // @match        *://*/*
 // @include      file:///*
@@ -24,7 +24,7 @@
 (function() {
     'use strict';
 
-    console.log("🔥 [CS:GO] V44.0 启动 - Core 44.0，作者DJ");
+    console.log("🔥 [CS:GO] V44.1 启动 - Core 44.1，作者DJ");
 
     // ================= V41 核心配置 (绝对保留) =================
     const DOMAIN_BASE = "http://work.cqdev.top";
@@ -873,7 +873,7 @@
                             <div id="wheel-labels"></div>
                         </div>
                     </div>
-                    <button id="btn-open-manual" class="manual-btn">📘 版本说明书 (V44.0)</button>
+                    <button id="btn-open-manual" class="manual-btn">📘 版本说明书 (V44.1)</button>
                 </div>
 
                 <div class="info-panel" id="panel-right" style="opacity:0; pointer-events:none;">
@@ -1044,9 +1044,9 @@
             </div>
 
             <div id="manual-modal">
-                <div class="manual-header" id="manual-header"><h2>📘 DJWebTool操作手册 V44.0</h2><div class="close-manual" id="close-manual">×</div></div>
+                <div class="manual-header" id="manual-header"><h2>📘 DJWebTool操作手册 V44.1</h2><div class="close-manual" id="close-manual">×</div></div>
                 <div class="manual-content">
-                    <h3>😀 V44.0 版本更新</h3>
+                    <h3>😀 V44.1 版本更新</h3>
                     <ul>
                         <li>
                         <strong>加入工时系统模块</strong>
