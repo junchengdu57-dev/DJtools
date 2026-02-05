@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         工时统计助手 - CS:GO (V43.5)
+// @name         工时统计助手 - CS:GO UI轮盘版 (V44.0)
 // @namespace    http://tampermonkey.net/
-// @version      43.5
-// @description  新增考勤统计模块
+// @version      44.0
+// @description  新增工时系统模块
 // @match        *://*/*
 // @include      file:///*
 // @updateURL    https://raw.githubusercontent.com/junchengdu57-dev/DJtools/main/CsgoWebTool.user.js
@@ -12,6 +12,7 @@
 // @connect      jira.transsion.com
 // @connect      jira-ex.transsion.com
 // @connect      www.mobiwire.com.cn
+// @connect      122.227.250.174
 // @grant        GM_xmlhttpRequest
 // @grant        GM_registerMenuCommand
 // @grant        GM_setValue
@@ -23,7 +24,7 @@
 (function() {
     'use strict';
 
-    console.log("🔥 [CS:GO] V43.5 启动 - Core 43.5，作者DJ");
+    console.log("🔥 [CS:GO] V44.0 启动 - Core 44.0，作者DJ");
 
     // ================= V41 核心配置 (绝对保留) =================
     const DOMAIN_BASE = "http://work.cqdev.top";
@@ -50,6 +51,17 @@
         query: "https://www.mobiwire.com.cn/query/OneRDsalary.asp",
         attend: "https://www.mobiwire.com.cn/query/COWA.asp"
     };
+
+    const TS_API_BASE = "http://122.227.250.174:4333";
+    const TS_URL_LOGIN = `${TS_API_BASE}/pmSystemApi/admin/login`;
+    const TS_URL_PROJ_DEV = `${TS_API_BASE}/pmSystemApi/admin/userWorkloadData/getPMSAndReProjectDataByUserId`;
+    const TS_URL_PROJ_PRE = `${TS_API_BASE}/pmSystemApi/admin/preResearchProject/lists`;
+    const TS_URL_PROJ_COM = `${TS_API_BASE}/pmSystemApi/admin/userWorkloadData/getCommonProjectDataByUserId`;
+    const TS_URL_STAGES = `${TS_API_BASE}/pmSystemApi/admin/userWorkloadData/getNPINode`;
+    const TS_URL_CHECKER = `${TS_API_BASE}/pmSystemApi/admin/userWorkloadData/getCheckPersonDataByUserId`;
+    const TS_URL_SAVE = `${TS_API_BASE}/pmSystemApi/admin/workloadRecord/insertOrUpdate`;
+    const TS_URL_DELETE = `${TS_API_BASE}/pmSystemApi/admin/workloadRecord/remove`;
+    const TS_URL_QUERY = `${TS_API_BASE}/pmSystemApi/admin/workloadRecord/listDtoByPage`;
 
     // Jira 配置
     const JIRA_INTERNAL = "http://jira.transsion.com";
@@ -532,7 +544,7 @@
         if (recordsAll.length === 0) { log("❌ 没有任何考勤数据"); btn.disabled = false; return; }
         const sumAll = summarize(recordsAll);
         log(`🏁 累计加班 ${totalMyOT.toFixed(2)}h | 累计净迟到 ${totalCleanLateMin}分钟 | 累计餐补 ${totalMeal} 元`);
-        
+
         // 生成CSV数据
         const monthGroups = {};
         recordsAll.forEach(r => { const k = `${r.year}-${String(r.month).padStart(2,'0')}`; (monthGroups[k] = monthGroups[k] || []).push(r); });
@@ -550,13 +562,13 @@
         recordsAll.forEach(r => {
             csv += [r.year, r.month, r.date, r.schedule, r.shiftStart, r.shiftEnd, r.clockIn, r.clockOut, r.lateEarly, r.cleanLate, r.noPayAbsence, r.payAbsence, r.paidOT, r.actualHours, r.meal, r.myOT].join(",") + "\n";
         });
-        
+
         // 在界面上显示表格预览和下载按钮
         const nameStart = `${sDate.getFullYear()}${String(sDate.getMonth()+1).padStart(2,'0')}`;
         const nameEnd = `${eDate.getFullYear()}${String(eDate.getMonth()+1).padStart(2,'0')}`;
         const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
         const url = URL.createObjectURL(blob);
-        
+
         // 创建表格预览区域
         let tableHtml = `<div style="margin-top:15px; padding:10px; background:#1a1a1a; border-radius:4px; border:1px solid #444;">
             <div style="color:#eab543; font-weight:bold; margin-bottom:10px;">📊 考勤统计汇总</div>
@@ -597,9 +609,9 @@
         tableHtml += `</tbody></table></div>
             <button id="btn-download-attendance" class="action-btn" style="width:100%; margin-top:10px;">📥 下载考勤统计表格</button>
         </div>`;
-        
+
         log(tableHtml);
-        
+
         // 绑定下载按钮
         setTimeout(() => {
             const downloadBtn = document.getElementById('btn-download-attendance');
@@ -615,7 +627,7 @@
                 };
             }
         }, 100);
-        
+
         btn.disabled = false;
     }
 
@@ -834,6 +846,11 @@
         .auth-label { font-size: 13px; color: #ccc; font-weight: bold; }
         .auth-input { width: 100%; box-sizing: border-box; background: #111; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 4px; font-size: 14px; transition: 0.2s; }
         .auth-input:focus { border-color: #eab543; background: #000; outline: none; }
+        .ts-table th, .ts-table td { border-bottom: 1px solid #444; padding: 8px; }
+        .ts-tag { display:inline-block; padding:2px 6px; border-radius:3px; font-size:12px; color:#000; margin-right:4px; }
+        .ts-tag-dev { background:#eab543; }
+        .ts-tag-pre { background:#27ae60; color:#fff; }
+        .ts-tag-com { background:#3498db; color:#fff; }
     `;
 
     function boot() {
@@ -856,12 +873,12 @@
                             <div id="wheel-labels"></div>
                         </div>
                     </div>
-                    <button id="btn-open-manual" class="manual-btn">📘 版本说明书 (V43.5)</button>
+                    <button id="btn-open-manual" class="manual-btn">📘 版本说明书 (V44.0)</button>
                 </div>
 
                 <div class="info-panel" id="panel-right" style="opacity:0; pointer-events:none;">
                     <div id="view-query" class="view-container hidden">
-                        <div class="panel-header"><div>📊 工作量统计</div><div style="font-size:12px;color:#666;">core 43，作者DJ</div></div>
+                        <div class="panel-header"><div>📊 工作量统计</div><div style="font-size:12px;color:#666;">core 44，作者DJ</div></div>
                         <div class="date-row" style="display:flex; gap:10px; margin-bottom:15px;">
                             <input type="date" id="cs-start" class="cs-input">
                             <input type="date" id="cs-end" class="cs-input">
@@ -877,7 +894,7 @@
                     </div>
 
                     <div id="view-add" class="view-container hidden">
-                        <div class="panel-header"><div>📝 填写工作量</div><div style="font-size:12px;color:#666;">core 43，作者DJ</div></div>
+                        <div class="panel-header"><div>📝 填写工作量</div><div style="font-size:12px;color:#666;">core 44，作者DJ</div></div>
                         <div class="add-form">
                             <div class="form-row"><div class="form-group" style="flex:1"><label class="form-label">开始日期</label><input type="date" id="add-start" class="add-input"></div><div class="form-group" style="flex:1"><label class="form-label">完成日期</label><input type="date" id="add-end" class="add-input"></div></div>
                             <div class="form-group proj-search-wrapper">
@@ -906,7 +923,7 @@
                     </div>
 
                     <div id="view-salary" class="view-container hidden">
-                        <div class="panel-header"><div>💰 薪资/考勤查询 (Mobiwire)</div><div style="font-size:12px;color:#666;">core 43，作者DJ</div></div>
+                        <div class="panel-header"><div>💰 薪资/考勤查询 (Mobiwire)</div><div style="font-size:12px;color:#666;">core 44，作者DJ</div></div>
                         <div class="tab-bar">
                             <button id="tab-salary" class="tab-btn active">查询薪资</button>
                             <button id="tab-att" class="tab-btn">查询考勤</button>
@@ -939,10 +956,60 @@
                         </div>
                     </div>
 
-                    
+                    <div id="view-timesheet" class="view-container hidden">
+                        <div class="panel-header"><div>⏱️ 工时系统</div><div style="font-size:12px;color:#666;">core 44，作者DJ</div></div>
+                        <div class="tab-bar">
+                            <button id="ts-tab-fill" class="tab-btn active">填写</button>
+                            <button id="ts-tab-query" class="tab-btn">查询/管理</button>
+                        </div>
+                        <div id="ts-panel-fill" class="add-form" style="display:block;">
+                            <div class="form-row">
+                                <div class="form-group" style="flex:1"><label class="form-label">类型</label><select id="ts-type" class="add-select"><option value="1">开发项目</option><option value="0">预研项目</option><option value="2">Common</option></select></div>
+                                <div class="form-group" style="flex:1"><label class="form-label">日期</label><input type="date" id="ts-date" class="add-input"></div>
+                            </div>
+                            <div class="form-group"><label class="form-label">项目</label>
+                                <input id="ts-project-1" class="add-input" list="list-project-1" placeholder="开发项目，支持搜索">
+                                <datalist id="list-project-1"></datalist>
+                                <input id="ts-project-0" class="add-input" list="list-project-0" placeholder="预研项目，支持搜索" style="display:none">
+                                <datalist id="list-project-0"></datalist>
+                                <input id="ts-project-2" class="add-input" list="list-project-2" placeholder="Common项目，支持搜索" style="display:none">
+                                <datalist id="list-project-2"></datalist>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group" style="flex:1"><label class="form-label">业务部门</label><select id="ts-dept" class="add-select" disabled><option>自动填充</option></select></div>
+                                <div class="form-group" style="flex:1"><label class="form-label">项目阶段</label><select id="ts-stage" class="add-select"><option>加载中...</option></select></div>
+                                <div class="form-group" style="flex:1"><label class="form-label">产品形态</label><select id="ts-form" class="add-select"><option>请先选项目</option></select></div>
+                            </div>
+                            <div class="form-group"><label class="form-label">工作内容</label><textarea id="ts-content" class="add-textarea" rows="3"></textarea></div>
+                            <div class="form-row"><div class="form-group" style="flex:1"><label class="form-label">工时</label><input type="number" id="ts-hours" class="add-input" value="8"></div>
+                                <div class="form-group" style="flex:1"><label class="form-label">检查人</label><select id="ts-reviewer" class="add-select"><option>加载中...</option></select></div>
+                            </div>
+                            <div id="ts-edit-tip" style="display:none; color:#eab543; font-size:12px;">当前编辑记录ID: <span id="ts-edit-id"></span></div>
+                            <button id="ts-btn-copy-yesterday" class="action-btn" style="width:100%;">参考昨日填写</button>
+                            <button id="ts-btn-submit" class="action-btn">提交保存</button>
+                        </div>
+                        <div id="ts-panel-query" style="display:none;">
+                            <div class="date-row" style="display:flex; gap:10px; margin-bottom:15px; align-items:center;">
+                                <input type="date" id="ts-query-start" class="cs-input" style="width:160px;">
+                                <input type="date" id="ts-query-end" class="cs-input" style="width:160px;">
+
+                            </div>
+                             <div class="date-row" style="display:flex; gap:10px; margin-bottom:15px; align-items:center;">
+                                <button id="ts-btn-search" class="action-btn">查询</button>
+                                <button id="ts-btn-export" class="action-btn" style="width:160px;">📊 导出Excel</button>
+                            </div>
+                            <div id="ts-query-empty" style="color:#888; font-size:12px; margin-top:10px;">暂无数据</div>
+                            <table class="ts-table" style="width:100%; border-collapse: collapse;">
+                                <thead><tr><th style="width:120px; text-align:left; color:#ccc;">日期</th><th style="text-align:left; color:#ccc;">项目/内容</th><th style="width:80px; text-align:center; color:#ccc;">工时</th><th style="width:160px; text-align:center; color:#ccc;">操作</th></tr></thead>
+                                <tbody id="ts-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+
 
                     <div id="view-settings" class="view-container hidden">
-                        <div class="panel-header"><div>⚙️ 账号设置</div><div style="font-size:12px;color:#666;">core 43，作者DJ</div></div>
+                        <div class="panel-header"><div>⚙️ 账号设置</div><div style="font-size:12px;color:#666;">core 44，作者DJ</div></div>
                         <div class="auth-form">
                             <div class="auth-section">
                                 <div class="auth-section-title">工时系统 (Sagereal)</div>
@@ -954,12 +1021,17 @@
                                 <div class="auth-group"><label class="auth-label">工号</label><input type="text" id="cfg-mw-emp" class="auth-input" placeholder="请输入工号"></div>
                                 <div class="auth-group"><label class="auth-label">密码</label><input type="password" id="cfg-mw-pwd" class="auth-input" placeholder="请输入密码"></div>
                             </div>
+                            <div class="auth-section">
+                                <div class="auth-section-title">工时系统 (TS)</div>
+                                <div class="auth-group"><label class="auth-label">用户名</label><input type="text" id="cfg-ts-user" class="auth-input" placeholder="请输入TS系统用户名"></div>
+                                <div class="auth-group"><label class="auth-label">密码</label><input type="password" id="cfg-ts-pwd" class="auth-input" placeholder="请输入TS系统密码"></div>
+                            </div>
                         </div>
                         <button id="btn-save-cfg" class="action-btn">保存配置</button>
                     </div>
 
                     <div id="view-history" class="view-container hidden">
-                        <div class="panel-header"><div>📜 填报历史</div><div style="font-size:12px;color:#666;">core 43，作者DJ</div></div>
+                        <div class="panel-header"><div>📜 填报历史</div><div style="font-size:12px;color:#666;">core 44，作者DJ</div></div>
                         <div class="hist-summary" style="display:flex; justify-content:space-around; margin-bottom:15px; background:#222; padding:10px; border-radius:4px;">
                             <div class="hist-sum-item"><div>本月已填</div><div class="hist-sum-val" id="hist-month-val" style="color:#eab543; font-weight:bold;">0h</div></div>
                             <div style="width:1px; background:#444;"></div>
@@ -972,8 +1044,24 @@
             </div>
 
             <div id="manual-modal">
-                <div class="manual-header" id="manual-header"><h2>📘 战术指挥官操作手册 V43.5</h2><div class="close-manual" id="close-manual">×</div></div>
+                <div class="manual-header" id="manual-header"><h2>📘 DJWebTool操作手册 V44.0</h2><div class="close-manual" id="close-manual">×</div></div>
                 <div class="manual-content">
+                    <h3>😀 V44.0 版本更新</h3>
+                    <ul>
+                        <li>
+                        <strong>加入工时系统模块</strong>
+                        <li>
+                            新增工时的增删改查、导出工时数据为excel
+                        </li>
+                        <li>
+                            支持填写<strong>任意时间</strong>工时以及对应的修改删除
+                        </li>
+                        <li>
+                            支持<strong>任意时间</strong>的工时信息查询
+                        </li>
+                        </li>
+                    </ul>
+                    <h3>✌ V43.0 修正版更新</h3>
                     <h3>✌ V43.5 版本更新</h3>
                     <ul>
                         <li><strong>加入考勤功能</strong>可在查薪资/考勤下，查询考勤、加班时长等信息，可下载报表</li>
@@ -1188,7 +1276,7 @@
         document.getElementById('btn-buy').onclick = queryWorkload;
         document.getElementById('btn-save-cfg').onclick = saveSettings;
         document.getElementById('btn-clear-hist').onclick = clearHistory;
-        
+
         document.getElementById('btn-load-salary').onclick = executeMobiwireFlow;
         const tabSalary = document.getElementById('tab-salary');
         const tabAtt = document.getElementById('tab-att');
@@ -1373,7 +1461,7 @@
                 if(currentMode === 'HISTORY') { document.getElementById('view-history').classList.remove('hidden'); renderHistory(); }
                 if(currentMode === 'SALARY') document.getElementById('view-salary').classList.remove('hidden');
                 if(currentMode === 'ATTENDANCE') document.getElementById('view-attendance').classList.remove('hidden');
-                if(currentMode === 'TIMESHEET') alert("工时系统模块开发中...");
+                if(currentMode === 'TIMESHEET') { document.getElementById('view-timesheet').classList.remove('hidden'); initTimesheet(); }
             }
         }
 
@@ -1656,7 +1744,9 @@
         const srPwd = document.getElementById('cfg-sr-pwd').value.trim();
         const mwEmp = document.getElementById('cfg-mw-emp').value.trim();
         const mwPwd = document.getElementById('cfg-mw-pwd').value.trim();
-        const auth = { sagereal: { jobNum: srJob, password: srPwd }, mobiwire: { emp: mwEmp, pwd: mwPwd } };
+        const tsUser = (document.getElementById('cfg-ts-user') && document.getElementById('cfg-ts-user').value.trim()) || '';
+        const tsPwd = (document.getElementById('cfg-ts-pwd') && document.getElementById('cfg-ts-pwd').value.trim()) || '';
+        const auth = { sagereal: { jobNum: srJob, password: srPwd }, mobiwire: { emp: mwEmp, pwd: mwPwd }, timesheet: { user: tsUser, password: tsPwd } };
         GM_setValue(STORAGE_KEY_AUTH, JSON.stringify(auth));
         alert("✅ 配置已保存！");
     }
@@ -1664,6 +1754,7 @@
         const auth = JSON.parse(GM_getValue(STORAGE_KEY_AUTH, '{}'));
         if (auth.sagereal) { document.getElementById('cfg-sr-job').value = auth.sagereal.jobNum || ""; document.getElementById('cfg-sr-pwd').value = auth.sagereal.password || ""; }
         if (auth.mobiwire) { document.getElementById('cfg-mw-emp').value = auth.mobiwire.emp || ""; document.getElementById('cfg-mw-pwd').value = auth.mobiwire.pwd || ""; }
+        if (auth.timesheet) { const uEl = document.getElementById('cfg-ts-user'); const pEl = document.getElementById('cfg-ts-pwd'); if(uEl) uEl.value = auth.timesheet.user || ""; if(pEl) pEl.value = auth.timesheet.password || ""; }
     }
     async function fetchProjects(force) {
         let projects = await fetchProjectList((m)=>document.getElementById('add-status').innerText=m, force);
@@ -1817,6 +1908,177 @@
             btn.disabled = false;
             btn.innerText = "确认查询";
         }
+    }
+
+    let TS_TOKEN = "";
+    let TS_UID = "";
+    const TS_DATA = { devProjects: [], preProjects: [], comProjects: [], lastQueryResult: [], editingId: null };
+
+    function initTimesheet() {
+        TS_TOKEN = "";
+        TS_UID = "";
+        const now = new Date();
+        const ymd = now.toISOString().split('T')[0];
+        const sEl = document.getElementById('ts-query-start');
+        const eEl = document.getElementById('ts-query-end');
+        const dEl = document.getElementById('ts-date');
+        if (sEl) sEl.value = ymd;
+        if (eEl) eEl.value = ymd;
+        if (dEl) dEl.value = ymd;
+        const tabFill = document.getElementById('ts-tab-fill');
+        const tabQuery = document.getElementById('ts-tab-query');
+        if (tabFill && tabQuery) {
+            tabFill.onclick = () => { tabFill.classList.add('active'); tabQuery.classList.remove('active'); document.getElementById('ts-panel-fill').style.display = 'block'; document.getElementById('ts-panel-query').style.display = 'none'; };
+            tabQuery.onclick = () => { tabQuery.classList.add('active'); tabFill.classList.remove('active'); document.getElementById('ts-panel-fill').style.display = 'none'; document.getElementById('ts-panel-query').style.display = 'block'; };
+        }
+        const typeSel = document.getElementById('ts-type');
+        const p0 = document.getElementById('ts-project-0');
+        const p1 = document.getElementById('ts-project-1');
+        const p2 = document.getElementById('ts-project-2');
+        function rerenderProjectInputs() {
+            const t = typeSel.value;
+            if (p0 && p1 && p2) {
+                p0.style.display = t === '0' ? '' : 'none';
+                p1.style.display = t === '1' ? '' : 'none';
+                p2.style.display = t === '2' ? '' : 'none';
+            }
+        }
+        if (typeSel) { typeSel.onchange = rerenderProjectInputs; rerenderProjectInputs(); }
+        const devInput = document.getElementById('ts-project-1');
+        if (devInput) devInput.addEventListener('change', handleDevProjectChange);
+        const btnSubmit = document.getElementById('ts-btn-submit');
+        if (btnSubmit) btnSubmit.onclick = handleTsSubmit;
+        const btnSearch = document.getElementById('ts-btn-search');
+        if (btnSearch) btnSearch.onclick = handleTsQuery;
+        const btnExport = document.getElementById('ts-btn-export');
+        if (btnExport) btnExport.onclick = handleTsExport;
+        const btnCopy = document.getElementById('ts-btn-copy-yesterday');
+        if (btnCopy) btnCopy.onclick = handleTsCopyYesterday;
+        ensureTsLogin().then((ok)=>{ if(ok) loadTsAllData(); });
+    }
+
+    function ensureTsLogin() {
+        if (TS_TOKEN) return Promise.resolve(true);
+        const auth = JSON.parse(GM_getValue(STORAGE_KEY_AUTH, '{}'));
+        const ts = (auth && auth.timesheet) || {};
+        if (!ts.user || !ts.password) { alert("请先在【账号设置】中配置工时系统(TS)账号"); renderWheel('SETTINGS'); return Promise.resolve(false); }
+        return new Promise((resolve) => {
+            GM_xmlhttpRequest({ method: "POST", url: TS_URL_LOGIN, headers: { "Content-Type": "application/json" }, data: JSON.stringify({ userName: ts.user, password: ts.password, rememberMe: false }), onload: function(res) {
+                try { const data = JSON.parse(res.responseText); if (res.status === 200 && data.code === 200) { TS_TOKEN = data.token; TS_UID = data.userId; resolve(true); } else resolve(false); } catch(e) { resolve(false); }
+            }, onerror: () => resolve(false) });
+        });
+    }
+
+    function loadTsAllData() {
+        const token = TS_TOKEN; const uid = TS_UID;
+        GM_xmlhttpRequest({ method: "POST", url: TS_URL_PROJ_DEV, headers: { "Content-Type": "application/x-www-form-urlencoded", "token": token }, data: "", onload: function(res) {
+            try { const data = JSON.parse(res.responseText); if(data.code === 200 && data.developmentProject) {
+                TS_DATA.devProjects = data.developmentProject;
+                let opts = ''; let forms = new Set();
+                data.developmentProject.forEach(p => { opts += `<option value="${p.projectName}">`; if(p.productForm) forms.add(p.productForm); });
+                const dl1 = document.getElementById('list-project-1'); if (dl1) dl1.innerHTML = opts;
+                let htmlF = '<option value="">请选择产品形态</option>'; forms.forEach(f => htmlF += `<option value="${f}">${f}</option>`);
+                const formSel = document.getElementById('ts-form'); if (formSel) formSel.innerHTML = htmlF;
+            } } catch(e) {}
+        }});
+        GM_xmlhttpRequest({ method: "POST", url: TS_URL_PROJ_PRE, headers: { "Content-Type": "application/json", "token": token }, data: "{}", onload: function(res) {
+            try { const data = JSON.parse(res.responseText); const list = data.lists || []; TS_DATA.preProjects = list; let opts = ''; list.forEach(p => { opts += `<option value="${p.preResearchProjectName}">`; }); const dl0 = document.getElementById('list-project-0'); if (dl0) dl0.innerHTML = opts; } catch(e) {}
+        }});
+        if (uid) {
+            GM_xmlhttpRequest({ method: "POST", url: TS_URL_PROJ_COM, headers: { "Content-Type": "application/x-www-form-urlencoded", "token": token }, data: `userId=${uid}`, onload: function(res) {
+                try { const data = JSON.parse(res.responseText); const list = data.commonProjects || []; TS_DATA.comProjects = list; let opts = ''; list.forEach(p => { opts += `<option value="${p.commonProjectName}">`; }); const dl2 = document.getElementById('list-project-2'); if (dl2) dl2.innerHTML = opts; } catch(e) {}
+            }});
+        }
+        GM_xmlhttpRequest({ method: "POST", url: TS_URL_STAGES, headers: { "Content-Type": "application/json", "token": token }, data: "{}", onload: function(res) {
+            try { const data = JSON.parse(res.responseText); if(data.npiNodeList) { let h='<option value="">请选择</option>'; data.npiNodeList.forEach(n=>h+=`<option value="${n.nodeName}">${n.nodeName}</option>`); const s = document.getElementById('ts-stage'); if (s) s.innerHTML=h; } } catch(e){}
+        }});
+        if (uid) {
+            GM_xmlhttpRequest({ method: "POST", url: TS_URL_CHECKER, headers: { "Content-Type": "application/x-www-form-urlencoded", "token": token }, data: `userId=${uid}`, onload: function(res) {
+                try { const data = JSON.parse(res.responseText); const list = data.checkPersons || []; if(list.length>0){ let h=''; list.forEach(p=>{ h+=`<option value="${p.userId}">${p.userNick}</option>`; }); const r = document.getElementById('ts-reviewer'); if (r) r.innerHTML = h; } } catch(e) {}
+            }});
+        }
+    }
+
+    function handleDevProjectChange() {
+        const name = document.getElementById('ts-project-1').value;
+        const project = TS_DATA.devProjects.find(p=>p.projectName===name);
+        if(project){ const d = document.getElementById('ts-dept'); if (project.businessDepartment && d) d.innerHTML = `<option value="${project.businessDepartment}" selected>${project.businessDepartment}(自动匹配)</option>`; const f = document.getElementById('ts-form'); if (project.productForm && f) f.value = project.productForm; }
+    }
+
+    function handleTsQuery() {
+        const token = TS_TOKEN; const uid = TS_UID; if(!token) return alert('请先登录');
+        const start = document.getElementById('ts-query-start').value; const end = document.getElementById('ts-query-end').value; const btn = document.getElementById('ts-btn-search'); if(btn){ btn.innerText='查询中...'; btn.disabled=true; }
+        const payload = { currPage: 1, pageSize: 100, dataForm: { workTimes: [`${start} 00:00:00`, `${end} 23:59:59`], creatorId: uid, workloadType: "", preResearchProjectId: "", commonProjectId: "", projectCategory: "", outerProjectCategory: "", businessDepartment: "", workloadNpiNode: "", productForm: "", workModuleId: "", workSubModuleId: "", workContent: "", workHour: "", remark: "", inspectorId: "", checkStatus: "", checkTimes: [], checkFeedback: "" } };
+        GM_xmlhttpRequest({ method: "POST", url: TS_URL_QUERY, headers: { "Content-Type": "application/json", "token": token }, data: JSON.stringify(payload), onload: function(res){ if(btn){ btn.innerText='查询'; btn.disabled=false; } try{ const d = JSON.parse(res.responseText); if(d.code===200){ TS_DATA.lastQueryResult = d.record || []; renderTsTable(d.record || []); } else alert('查询失败: '+d.msg); } catch(e){ alert('查询解析异常'); } } });
+    }
+
+    function resolveTsProjectName(item) {
+        if (item.workloadType == '1') return item.projectCategory || '';
+        if (item.workloadType == '0') { const p = TS_DATA.preProjects.find(i=> String(i.preResearchProjectId) === String(item.preResearchProjectId)); return p ? p.preResearchProjectName : ''; }
+        if (item.workloadType == '2') { const p = TS_DATA.comProjects.find(i=> String(i.commonProjectId) === String(item.commonProjectId)); return p ? p.commonProjectName : ''; }
+        return '';
+    }
+
+    function renderTsTable(list) {
+        const tbody = document.getElementById('ts-table-body'); const empty = document.getElementById('ts-query-empty'); if(!tbody || !empty) return; tbody.innerHTML = ''; if(list.length===0){ empty.style.display='block'; return; } empty.style.display='none';
+        list.forEach(item=>{ const tr = document.createElement('tr'); const typeLabel = item.workloadType == '1' ? '<span class="ts-tag ts-tag-dev">开发</span>' : (item.workloadType == '0' ? '<span class="ts-tag ts-tag-pre">预研</span>' : '<span class="ts-tag ts-tag-com">Common</span>'); const projectName = resolveTsProjectName(item); const date = item.workTime ? item.workTime.split('T')[0] : ''; tr.innerHTML = `<td>${date}</td><td>${typeLabel} <b>${projectName}</b><br><span style="color:#666; display:block; margin-top:4px;">${item.workContent}</span></td><td style="text-align:center">${item.workHour}</td><td style="text-align:center"><button class="sub-btn ts-op-edit">编辑</button><button class="sub-btn ts-op-del" style="margin-top:4px; color:#e74c3c;">删除</button></td>`; tr.querySelector('.ts-op-edit').onclick = () => loadTsRecordToForm(item, projectName); tr.querySelector('.ts-op-del').onclick = () => deleteTsRecord(item.workloadRecordId); tbody.appendChild(tr); });
+    }
+
+    function handleTsExport() {
+        const list = TS_DATA.lastQueryResult;
+        if (!list || list.length === 0) { alert('请先查询后再导出'); return; }
+        let csv = '日期,类型,项目名称,工作内容,工时(H),阶段/形态,检查人\n';
+        list.forEach(item => {
+            const date = item.workTime ? item.workTime.split('T')[0] : '';
+            const type = item.workloadType == '1' ? '开发' : (item.workloadType == '0' ? '预研' : 'Common');
+            const project = resolveTsProjectName(item).replace(/,/g, ' ');
+            const content = (item.workContent || '').replace(/[\r\n,]/g, ' ');
+            const hours = item.workHour || 0;
+            const extra = item.workloadType == '1' ? `${item.workloadNpiNode || ''}/${item.productForm || ''}` : '-';
+            const inspector = item.inspector ? ((item.inspector.userNick || item.inspector.userName) || '') : (item.inspectorId || '');
+            csv += `${date},${type},${project},${content},${hours},${extra},${inspector}\n`;
+        });
+        const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `工时记录_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function loadTsRecordToForm(record, resolvedProjectName) {
+        const tabFill = document.getElementById('ts-tab-fill'); if (tabFill) tabFill.click(); TS_DATA.editingId = record.workloadRecordId; const tip = document.getElementById('ts-edit-tip'); const idEl = document.getElementById('ts-edit-id'); if (tip) tip.style.display='block'; if (idEl) idEl.innerText = record.workloadRecordId; const btn = document.getElementById('ts-btn-submit'); if (btn) btn.innerText = '确认修改'; const typeSel = document.getElementById('ts-type'); if (typeSel){ typeSel.value = String(record.workloadType); typeSel.dispatchEvent(new Event('change')); }
+        setTimeout(()=>{ if(record.workloadType == '1') { const p1 = document.getElementById('ts-project-1'); if(p1) p1.value = record.projectCategory; } else if(record.workloadType == '0'){ const p0 = document.getElementById('ts-project-0'); if(p0) p0.value = resolvedProjectName; } else if(record.workloadType == '2'){ const p2 = document.getElementById('ts-project-2'); if(p2) p2.value = resolvedProjectName; } const c = document.getElementById('ts-content'); if(c) c.value = record.workContent; const h = document.getElementById('ts-hours'); if(h) h.value = record.workHour; const d = document.getElementById('ts-date'); if(d) d.value = record.workTime.split('T')[0]; const r = document.getElementById('ts-reviewer'); if(r && record.inspectorId) r.value = record.inspectorId; if(record.workloadType == '1'){ const st = document.getElementById('ts-stage'); if(st) st.value = record.workloadNpiNode; const f = document.getElementById('ts-form'); if(f) f.value = record.productForm; handleDevProjectChange(); } }, 100);
+    }
+
+    function resetTsFormToCreate() { TS_DATA.editingId = null; const tip = document.getElementById('ts-edit-tip'); if(tip) tip.style.display='none'; const btn = document.getElementById('ts-btn-submit'); if(btn) btn.innerText='提交保存'; const c = document.getElementById('ts-content'); if(c) c.value=''; }
+
+    function deleteTsRecord(id) {
+        if(!confirm('确定要删除这条工时记录吗？')) return;
+        const token = TS_TOKEN;
+        GM_xmlhttpRequest({ method: "POST", url: TS_URL_DELETE, headers: { "Content-Type": "application/x-www-form-urlencoded", "token": token }, data: `workloadRecordId=${id}`, onload: function(res){ try{ const d = JSON.parse(res.responseText); if(d.code===200){ alert('🗑️ 删除成功'); handleTsQuery(); } else { alert('删除失败: '+d.msg); } } catch(e){ alert('删除异常'); } } });
+    }
+
+    function handleTsSubmit() {
+        const token = TS_TOKEN; const uid = TS_UID; const type = document.getElementById('ts-type').value; const dateStr = document.getElementById('ts-date').value;
+        const payload = { workloadType: type, preResearchProjectId: "", commonProjectId: "", projectCategory: "", outerProjectCategory: "", businessDepartment: document.getElementById('ts-dept').value, workloadNpiNode: "", productForm: "", workModuleId: "null", workSubModuleId: "", workContent: document.getElementById('ts-content').value, workHour: Number(document.getElementById('ts-hours').value), workTime: new Date(dateStr + "T09:00:00").toISOString(), remark: "", inspectorId: document.getElementById('ts-reviewer').value, creatorId: uid, checkStatus: "0", checkTime: null, checkFeedback: "" };
+        if (TS_DATA.editingId) payload.workloadRecordId = TS_DATA.editingId;
+        if(type == '1') { const projName = document.getElementById('ts-project-1').value; payload.projectCategory = projName; payload.outerProjectCategory = projName; payload.workloadNpiNode = document.getElementById('ts-stage').value; payload.productForm = document.getElementById('ts-form').value; }
+        else if(type == '0') { const name = document.getElementById('ts-project-0').value; const p = TS_DATA.preProjects.find(i=> i.preResearchProjectName === name); if(p) payload.preResearchProjectId = p.preResearchProjectId; else return alert('请选择有效的预研项目'); }
+        else if(type == '2') { const name = document.getElementById('ts-project-2').value; const p = TS_DATA.comProjects.find(i=> i.commonProjectName === name); if(p) payload.commonProjectId = p.commonProjectId; else return alert('请选择有效的Common项目'); }
+        if(!payload.workContent) return alert('请填写工作内容');
+        const btn = document.getElementById('ts-btn-submit'); const isEdit = !!TS_DATA.editingId; if(btn){ btn.innerText = isEdit ? '修改中...' : '提交中...'; btn.disabled = true; }
+        GM_xmlhttpRequest({ method: "POST", url: TS_URL_SAVE, headers: { "Content-Type": "application/json", "token": token }, data: JSON.stringify(payload), onload: function(res){ if(btn){ btn.innerText = isEdit ? '确认修改' : '提交保存'; btn.disabled = false; } try{ const d = JSON.parse(res.responseText); if(d.code===200){ alert(isEdit ? '✅ 修改成功！' : '✅ 提交成功！'); if(isEdit) resetTsFormToCreate(); } else if(d.code===500 && d.msg && d.msg.includes('16H')) alert('❌ 失败：该日期累计工时已超过 16 小时！'); else alert('❌ 失败: '+d.msg); } catch(e){ alert('解析响应失败'); } } });
+    }
+
+    function handleTsCopyYesterday() {
+        const token = TS_TOKEN; const uid = TS_UID; if(!token) return alert('请先登录');
+        const today = new Date(); const yesterday = new Date(today); yesterday.setDate(yesterday.getDate()-1); const yStr = yesterday.toISOString().split('T')[0]; const btn = document.getElementById('ts-btn-copy-yesterday'); if(!btn) return; const originalText = btn.innerText; btn.innerText='查询中...'; btn.disabled=true;
+        const payload = { currPage: 1, pageSize: 10, dataForm: { workTimes: [`${yStr} 00:00:00`, `${yStr} 23:59:59`], creatorId: uid, workloadType: "", preResearchProjectId: "", commonProjectId: "", projectCategory: "", outerProjectCategory: "", businessDepartment: "", workloadNpiNode: "", productForm: "", workModuleId: "", workSubModuleId: "", workContent: "", workHour: "", remark: "", inspectorId: "", checkStatus: "", checkTimes: [], checkFeedback: "" } };
+        GM_xmlhttpRequest({ method: "POST", url: TS_URL_QUERY, headers: { "Content-Type": "application/json", "token": token }, data: JSON.stringify(payload), onload: function(res){ btn.innerText = originalText; btn.disabled=false; try{ const d = JSON.parse(res.responseText); if(d.code===200 && d.record && d.record.length>0){ const record = d.record[0]; const typeSel = document.getElementById('ts-type'); if(typeSel){ typeSel.value = record.workloadType; typeSel.dispatchEvent(new Event('change')); } const c = document.getElementById('ts-content'); if(c) c.value = record.workContent || ''; const h = document.getElementById('ts-hours'); if(h) h.value = record.workHour || 8; const r = document.getElementById('ts-reviewer'); if(r && record.inspectorId) r.value = record.inspectorId; if(record.workloadType=='1'){ const p1 = document.getElementById('ts-project-1'); if(p1) p1.value = record.projectCategory || ''; const st = document.getElementById('ts-stage'); if(st) st.value = record.workloadNpiNode || ''; const f = document.getElementById('ts-form'); if(f) f.value = record.productForm || ''; } else if(record.workloadType=='0'){ const p0 = document.getElementById('ts-project-0'); const name = resolveTsProjectName(record); if(p0) p0.value = name || ''; } else if(record.workloadType=='2'){ const p2 = document.getElementById('ts-project-2'); const name = resolveTsProjectName(record); if(p2) p2.value = name || ''; } } else alert('昨日未找到工时记录'); } catch(e){ alert('解析响应失败'); } } });
     }
     function submitWorkloadAction() {
         const data = {
