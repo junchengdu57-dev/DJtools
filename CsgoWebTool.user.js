@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         工时统计助手 - CS:GO UI轮盘版 (V44.0)
 // @namespace    http://tampermonkey.net/
-// @version      44.0
+// @version      44.0.1
 // @description  新增工时系统模块
 // @match        *://*/*
 // @include      file:///*
@@ -1012,7 +1012,7 @@
                         <div class="panel-header"><div>⚙️ 账号设置</div><div style="font-size:12px;color:#666;">core 44，作者DJ</div></div>
                         <div class="auth-form">
                             <div class="auth-section">
-                                <div class="auth-section-title">工时系统 (Sagereal)</div>
+                                <div class="auth-section-title">工作量系统 (Sagereal)</div>
                                 <div class="auth-group"><label class="auth-label">工号</label><input type="text" id="cfg-sr-job" class="auth-input" placeholder="请输入工号"></div>
                                 <div class="auth-group"><label class="auth-label">密码</label><input type="password" id="cfg-sr-pwd" class="auth-input" placeholder="请输入密码 (支持明文/MD5)"></div>
                             </div>
@@ -1022,9 +1022,9 @@
                                 <div class="auth-group"><label class="auth-label">密码</label><input type="password" id="cfg-mw-pwd" class="auth-input" placeholder="请输入密码"></div>
                             </div>
                             <div class="auth-section">
-                                <div class="auth-section-title">工时系统 (TS)</div>
-                                <div class="auth-group"><label class="auth-label">用户名</label><input type="text" id="cfg-ts-user" class="auth-input" placeholder="请输入TS系统用户名"></div>
-                                <div class="auth-group"><label class="auth-label">密码</label><input type="password" id="cfg-ts-pwd" class="auth-input" placeholder="请输入TS系统密码"></div>
+                                <div class="auth-section-title">工时系统 </div>
+                                <div class="auth-group"><label class="auth-label">用户名</label><input type="text" id="cfg-ts-user" class="auth-input" placeholder="请输入工时系统用户名"></div>
+                                <div class="auth-group"><label class="auth-label">密码</label><input type="password" id="cfg-ts-pwd" class="auth-input" placeholder="请输入工时系统密码"></div>
                             </div>
                         </div>
                         <button id="btn-save-cfg" class="action-btn">保存配置</button>
