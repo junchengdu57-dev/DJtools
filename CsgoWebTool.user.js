@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         工时统计助手 - CS:GO UI轮盘版 (V44.2)
+// @name         工时统计助手 - CS:GO UI轮盘版 (V44.3)
 // @namespace    http://tampermonkey.net/
-// @version      44.2
+// @version      44.3
 // @description  薪资查询支持跨年份查询+修复关闭再打开面板表单消失问题
 // @match        *://*/*
 // @include      file:///*
@@ -24,7 +24,7 @@
 (function() {
     'use strict';
 
-    console.log("🔥 [CS:GO] V44.2 启动 - Core 44.2，作者DJ");
+    console.log("🔥 [CS:GO] V44.3 启动 - Core 44.3，作者DJ");
 
     // ================= V41 核心配置 (绝对保留) =================
     const DOMAIN_BASE = "http://work.cqdev.top";
@@ -72,6 +72,7 @@
     const STORAGE_KEY_AUTH = 'tm_csgo_v42_auth';
     const STORAGE_KEY_SUBMIT_HISTORY = 'tm_csgo_v42_submit_hist';
     const KEY_MENU_ORDER = 'tm_csgo_v42_menu_order';
+    const KEY_THEME = 'tm_csgo_v42_theme';
 
     let SESSION_TOKEN = "";
     let SESSION_ID_8989 = "";
@@ -602,25 +603,25 @@
 
         // 创建表格预览区域
         let tableHtml = `<div style="margin-top:15px; padding:10px; background:#1a1a1a; border-radius:4px; border:1px solid #444;">
-            <div style="color:#eab543; font-weight:bold; margin-bottom:10px;">📊 考勤统计汇总</div>
+            <div style="color: var(--accent); font-weight:bold; margin-bottom:10px;">📊 考勤统计汇总</div>
             <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:10px;">
                 <div style="text-align:center; padding:8px; background:#222; border-radius:4px;">
                     <div style="color:#888; font-size:12px;">累计加班</div>
-                    <div style="color:#eab543; font-size:18px; font-weight:bold;">${totalMyOT.toFixed(2)}h</div>
+                    <div style="color: var(--accent); font-size:18px; font-weight:bold;">${totalMyOT.toFixed(2)}h</div>
                 </div>
                 <div style="text-align:center; padding:8px; background:#222; border-radius:4px;">
                     <div style="color:#888; font-size:12px;">累计净迟到</div>
-                    <div style="color:#eab543; font-size:18px; font-weight:bold;">${totalCleanLateMin}分钟</div>
+                    <div style="color: var(--accent); font-size:18px; font-weight:bold;">${totalCleanLateMin}分钟</div>
                 </div>
                 <div style="text-align:center; padding:8px; background:#222; border-radius:4px;">
                     <div style="color:#888; font-size:12px;">累计餐补</div>
-                    <div style="color:#eab543; font-size:18px; font-weight:bold;">${totalMeal}元</div>
+                    <div style="color: var(--accent); font-size:18px; font-weight:bold;">${totalMeal}元</div>
                 </div>
             </div>
             <div style="max-height:200px; overflow-y:auto; margin-bottom:10px;">
                 <table style="width:100%; border-collapse:collapse; font-size:12px;">
                     <thead>
-                        <tr style="background:#222; color:#eab543;">
+                        <tr style="background:#222; color: var(--accent);">
                             <th style="padding:6px; border:1px solid #444; text-align:left;">月份</th>
                             <th style="padding:6px; border:1px solid #444; text-align:right;">天数</th>
                             <th style="padding:6px; border:1px solid #444; text-align:right;">净迟到</th>
@@ -795,8 +796,29 @@
 
     // ================= 界面构建 (V42新版样式) =================
     const css = `
-        #csgo-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 18, 18, 0.95); z-index: 2147483647; display: none; justify-content: center; align-items: center; font-family: 'Microsoft YaHei', sans-serif; backdrop-filter: blur(5px); opacity: 0; transition: opacity 0.2s; pointer-events: none; user-select: none; }
+        #csgo-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlayBg); z-index: 2147483647; display: none; justify-content: center; align-items: center; font-family: 'Microsoft YaHei', sans-serif; backdrop-filter: blur(var(--overlayBlur)); opacity: 0; transition: opacity 0.2s; pointer-events: none; user-select: none; --accent: #eab543; --accentFill: rgba(234, 181, 67, 0.8); --accentSoft: rgba(234, 181, 67, 0.1); --overlayBg: rgba(18, 18, 18, 0.95); --overlayBlur: 5px; --panelBg: rgba(30, 30, 30, 0.98); --panelText: #ddd; --modalBg: rgba(30,30,30,0.95); --modalBlur: 10px; --cardBg: #1a1a1a; --cardItemBg: #222; --cardHoverBg: #282828; --cardBorder: #444; }
         #csgo-overlay.active { opacity: 1; pointer-events: auto; display: flex; }
+        #csgo-overlay.theme-gold { --accent: #eab543; --accentFill: rgba(234, 181, 67, 0.8); --accentSoft: rgba(234, 181, 67, 0.1); --overlayBg: rgba(18,18,18,0.92); --overlayBlur: 6px; --panelBg: rgba(28,28,28,0.98); --panelText: #ddd; --modalBg: rgba(30,30,30,0.95); --modalBlur: 10px; --cardBg:#1a1a1a; --cardItemBg:#222; --cardHoverBg:#282828; --cardBorder:#444; }
+        #csgo-overlay.theme-blue { --accent: #3b82f6; --accentFill: rgba(59, 130, 246, 0.8); --accentSoft: rgba(59, 130, 246, 0.1); --overlayBg: rgba(17,22,35,0.9); --overlayBlur: 7px; --panelBg: rgba(24,28,40,0.98); --panelText: #e6f0ff; --modalBg: rgba(24,28,40,0.95); --modalBlur: 10px; --cardBg:#1c2333; --cardItemBg:#20283a; --cardHoverBg:#273046; --cardBorder:#3b4a6a; }
+        #csgo-overlay.theme-green { --accent: #22c55e; --accentFill: rgba(34, 197, 94, 0.8); --accentSoft: rgba(34, 197, 94, 0.1); --overlayBg: rgba(16,28,22,0.9); --overlayBlur: 6px; --panelBg: rgba(22,30,26,0.98); --panelText: #e8fff0; --modalBg: rgba(22,30,26,0.95); --modalBlur: 10px; --cardBg:#18241e; --cardItemBg:#1d2a24; --cardHoverBg:#223129; --cardBorder:#3a4a40; }
+        #csgo-overlay.theme-purple { --accent: #8b5cf6; --accentFill: rgba(139, 92, 246, 0.8); --accentSoft: rgba(139, 92, 246, 0.1); --overlayBg: rgba(24,16,36,0.9); --overlayBlur: 7px; --panelBg: rgba(30,22,40,0.98); --panelText: #f0eaff; --modalBg: rgba(30,22,40,0.95); --modalBlur: 10px; --cardBg:#221a33; --cardItemBg:#271f3b; --cardHoverBg:#2e2446; --cardBorder:#4a3a72; }
+        #csgo-overlay.theme-red { --accent: #ef4444; --accentFill: rgba(239, 68, 68, 0.8); --accentSoft: rgba(239, 68, 68, 0.1); --overlayBg: rgba(36,16,16,0.9); --overlayBlur: 6px; --panelBg: rgba(40,22,22,0.98); --panelText: #ffecec; --modalBg: rgba(40,22,22,0.95); --modalBlur: 10px; --cardBg:#221616; --cardItemBg:#271a1a; --cardHoverBg:#2e1f1f; --cardBorder:#6a3a3a; }
+        #csgo-overlay.theme-cream { --accent: #c79a4a; --accentFill: rgba(199,154,74,0.20); --accentSoft: rgba(199,154,74,0.10); --overlayBg: rgba(242, 238, 230, 0.82); --overlayBlur: 4px; --panelBg: rgba(255,255,255,0.94); --panelText: #222; --modalBg: rgba(255,255,255,0.94); --modalBlur: 6px; --cardBg:#f4f1ea; --cardItemBg:#f1eee7; --cardHoverBg:#ebe7df; --cardBorder:#d7cfc1; }
+        #csgo-overlay.theme-mint { --accent: #2ecc71; --accentFill: rgba(46, 204, 113, 0.8); --accentSoft: rgba(46, 204, 113, 0.12); --overlayBg: rgba(18, 26, 22, 0.9); --overlayBlur: 6px; --panelBg: rgba(24, 32, 28, 0.98); --panelText: #e9fff1; --modalBg: rgba(24,32,28,0.95); --modalBlur: 10px; --cardBg:#1a241f; --cardItemBg:#1f2a24; --cardHoverBg:#243129; --cardBorder:#3a4a40; }
+        #csgo-overlay.theme-teal { --accent: #14b8a6; --accentFill: rgba(20, 184, 166, 0.8); --accentSoft: rgba(20, 184, 166, 0.12); --overlayBg: rgba(14, 24, 22, 0.9); --overlayBlur: 6px; --panelBg: rgba(20, 28, 26, 0.98); --panelText: #e6fffb; --modalBg: rgba(20,28,26,0.95); --modalBlur: 10px; --cardBg:#172422; --cardItemBg:#1b2a28; --cardHoverBg:#1f302e; --cardBorder:#375a56; }
+        #csgo-overlay.theme-olive { --accent: #6b8e23; --accentFill: rgba(107, 142, 35, 0.8); --accentSoft: rgba(107, 142, 35, 0.12); --overlayBg: rgba(20, 24, 16, 0.9); --overlayBlur: 6px; --panelBg: rgba(26, 30, 22, 0.98); --panelText: #eef5e3; --modalBg: rgba(26,30,22,0.95); --modalBlur: 10px; --cardBg:#1c2216; --cardItemBg:#20281a; --cardHoverBg:#252f1f; --cardBorder:#4a5a36; }
+        #csgo-overlay.theme-forest { --accent: #14532d; --accentFill: rgba(20, 83, 45, 0.8); --accentSoft: rgba(20, 83, 45, 0.12); --overlayBg: rgba(12, 18, 14, 0.9); --overlayBlur: 7px; --panelBg: rgba(18, 24, 20, 0.98); --panelText: #e6fff0; --modalBg: rgba(18,24,20,0.95); --modalBlur: 10px; --cardBg:#141c16; --cardItemBg:#172119; --cardHoverBg:#1b271e; --cardBorder:#365a40; }
+        #csgo-overlay.theme-slate { --accent: #64748b; --accentFill: rgba(100, 116, 139, 0.8); --accentSoft: rgba(100, 116, 139, 0.12); --overlayBg: rgba(15, 18, 22, 0.9); --overlayBlur: 7px; --panelBg: rgba(20, 24, 28, 0.98); --panelText: #eef2f7; --modalBg: rgba(20,24,28,0.95); --modalBlur: 10px; --cardBg:#1a1e24; --cardItemBg:#1f232a; --cardHoverBg:#242a32; --cardBorder:#3a4a5a; }
+        #csgo-overlay.theme-cyan { --accent: #06b6d4; --accentFill: rgba(6, 182, 212, 0.8); --accentSoft: rgba(6, 182, 212, 0.12); --overlayBg: rgba(12, 24, 28, 0.9); --overlayBlur: 7px; --panelBg: rgba(18, 26, 30, 0.98); --panelText: #e8fbff; --modalBg: rgba(18,26,30,0.95); --modalBlur: 10px; --cardBg:#162228; --cardItemBg:#1a2830; --cardHoverBg:#1f3038; --cardBorder:#2e5a6a; }
+        #csgo-overlay.theme-amber { --accent: #f59e0b; --accentFill: rgba(245, 158, 11, 0.8); --accentSoft: rgba(245, 158, 11, 0.12); --overlayBg: rgba(24, 18, 10, 0.9); --overlayBlur: 6px; --panelBg: rgba(30, 24, 16, 0.98); --panelText: #fff5e6; --modalBg: rgba(30,24,16,0.95); --modalBlur: 10px; --cardBg:#1e1a14; --cardItemBg:#221e17; --cardHoverBg:#27231c; --cardBorder:#5a4a36; }
+        #csgo-overlay.theme-neutral { --accent: #9ca3af; --accentFill: rgba(156, 163, 175, 0.8); --accentSoft: rgba(156, 163, 175, 0.12); --overlayBg: rgba(20, 20, 20, 0.92); --overlayBlur: 6px; --panelBg: rgba(26, 26, 26, 0.98); --panelText: #ddd; --modalBg: rgba(26,26,26,0.95); --modalBlur: 10px; --cardBg:#1c1c1c; --cardItemBg:#212121; --cardHoverBg:#262626; --cardBorder:#4a4a4a; }
+        #csgo-overlay.theme-greige { --accent: #b8a58c; --accentFill: rgba(184, 165, 140, 0.25); --accentSoft: rgba(184, 165, 140, 0.12); --overlayBg: rgba(245, 242, 236, 0.85); --overlayBlur: 4px; --panelBg: rgba(255,255,255,0.96); --panelText: #222; --modalBg: rgba(255,255,255,0.96); --modalBlur: 6px; --cardBg:#f5f3ee; --cardItemBg:#f0eee8; --cardHoverBg:#eae7e1; --cardBorder:#d6cec0; }
+        #csgo-overlay.theme-emerald { --accent: #10b981; --accentFill: rgba(16, 185, 129, 0.8); --accentSoft: rgba(16, 185, 129, 0.12); --overlayBg: rgba(16, 24, 20, 0.92); --overlayBlur: 7px; --panelBg: rgba(22, 30, 26, 0.98); --panelText: #e8fff1; --modalBg: rgba(22,30,26,0.95); --modalBlur: 10px; --cardBg:#18231f; --cardItemBg:#1d2924; --cardHoverBg:#223029; --cardBorder:#355a48; }
+        #csgo-overlay.theme-navy { --accent: #1e40af; --accentFill: rgba(30, 64, 175, 0.8); --accentSoft: rgba(30, 64, 175, 0.12); --overlayBg: rgba(17, 22, 35, 0.92); --overlayBlur: 7px; --panelBg: rgba(22, 28, 40, 0.98); --panelText: #e6f0ff; --modalBg: rgba(22,28,40,0.95); --modalBlur: 10px; --cardBg:#1b2336; --cardItemBg:#1f2940; --cardHoverBg:#242f49; --cardBorder:#3a4a6a; }
+        #csgo-overlay.theme-mauve { --accent: #7c4dff; --accentFill: rgba(124, 77, 255, 0.8); --accentSoft: rgba(124, 77, 255, 0.12); --overlayBg: rgba(26, 20, 40, 0.92); --overlayBlur: 7px; --panelBg: rgba(30, 24, 48, 0.98); --panelText: #f0ecff; --modalBg: rgba(30,24,48,0.95); --modalBlur: 10px; --cardBg:#211a33; --cardItemBg:#251f3b; --cardHoverBg:#2c2546; --cardBorder:#4a3a72; }
+        #csgo-overlay.theme-seasalt { --accent: #8ecae6; --accentFill: rgba(142, 202, 230, 0.22); --accentSoft: rgba(142, 202, 230, 0.10); --overlayBg: rgba(242, 247, 252, 0.85); --overlayBlur: 4px; --panelBg: rgba(255,255,255,0.96); --panelText: #222; --modalBg: rgba(255,255,255,0.96); --modalBlur: 6px; --cardBg:#f2f6fb; --cardItemBg:#eef3f9; --cardHoverBg:#e7eff7; --cardBorder:#c8d7e6; }
+        #csgo-overlay.theme-graphite { --accent: #8d8d8d; --accentFill: rgba(141, 141, 141, 0.8); --accentSoft: rgba(141, 141, 141, 0.12); --overlayBg: rgba(14, 14, 14, 0.92); --overlayBlur: 6px; --panelBg: rgba(20, 20, 20, 0.98); --panelText: #dcdcdc; --modalBg: rgba(20,20,20,0.95); --modalBlur: 10px; --cardBg:#141414; --cardItemBg:#1a1a1a; --cardHoverBg:#202020; --cardBorder:#3a3a3a; }
+        #csgo-overlay.theme-dawn { --accent: #ff8fb1; --accentFill: rgba(255, 143, 177, 0.22); --accentSoft: rgba(255, 143, 177, 0.10); --overlayBg: rgba(255, 244, 248, 0.85); --overlayBlur: 4px; --panelBg: rgba(255,255,255,0.96); --panelText: #222; --modalBg: rgba(255,255,255,0.96); --modalBlur: 6px; --cardBg:#fbf3f6; --cardItemBg:#f7eef2; --cardHoverBg:#f1e6ec; --cardBorder:#eecad7; }
         .csgo-container { display: flex; gap: 60px; align-items: center; flex-direction: row; }
         .left-section { display: flex; flex-direction: column; align-items: center; gap: 20px; }
         .wheel-wrapper { position: relative; width: 420px; height: 420px; border-radius: 50%; z-index: 20; transition: transform 0.1s cubic-bezier(0.1, 0.7, 1.0, 0.1); }
@@ -804,26 +826,26 @@
         .wheel-sensor { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; cursor: crosshair; z-index: 30; }
         .wheel-visual { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle, rgba(50,50,50,1) 30%, rgba(20,20,20,0.8) 100%); border: 4px solid rgba(255, 255, 255, 0.1); box-shadow: 0 0 30px rgba(0,0,0,0.8); pointer-events: none; }
         .svg-sector { fill: transparent; stroke: rgba(255,255,255,0.05); stroke-width: 1; transition: all 0.15s ease; cursor: pointer; }
-        .svg-sector.active { fill: rgba(234, 181, 67, 0.8); stroke: #fff; stroke-width: 2px; }
+        .svg-sector.active { fill: var(--accentFill); stroke: #fff; stroke-width: 2px; }
         .svg-sector.drag-target { fill: rgba(0, 255, 255, 0.5) !important; stroke: #00ffff !important; stroke-width: 3px; }
         .wedge-label { position: absolute; color: #888; text-align: center; pointer-events: none; z-index: 10; transition: 0.2s; font-size: 14px; width: 80px; height: 40px; display:flex; flex-direction:column; justify-content:center; align-items:center; }
-        .wedge-label.active { color: #fff; font-weight: bold; transform: scale(1.1); text-shadow: 0 0 10px #eab543; }
+        .wedge-label.active { color: #fff; font-weight: bold; transform: scale(1.1); text-shadow: 0 0 10px var(--accent); }
         .wedge-label.drag-target { color: #00ffff !important; font-weight: bold; transform: scale(1.2); text-shadow: 0 0 10px #00ffff; }
-        .center-hub { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120px; height: 120px; border-radius: 50%; background: #222; border: 3px solid #eab543; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 40; box-shadow: 0 0 20px rgba(0,0,0,0.5); pointer-events: auto; cursor: pointer; transition: background 0.2s; }
+        .center-hub { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120px; height: 120px; border-radius: 50%; background: #222; border: 3px solid var(--accent); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 40; box-shadow: 0 0 20px rgba(0,0,0,0.5); pointer-events: auto; cursor: pointer; transition: background 0.2s; }
         .center-hub:hover { background: #333; }
-        .hub-text { color: #eab543; font-weight: bold; font-size: 16px; }
-        .info-panel { width: 600px; height: 700px; background: rgba(30, 30, 30, 0.98); border-left: 4px solid #eab543; padding: 25px 30px; color: #ddd; box-shadow: 10px 10px 40px rgba(0,0,0,0.6); z-index: 50; display: flex; flex-direction: column; position: relative; overflow: hidden; pointer-events: auto !important; border-radius: 0 8px 8px 0; }
+        .hub-text { color: var(--accent); font-weight: bold; font-size: 16px; }
+        .info-panel { width: 600px; height: 700px; background: var(--panelBg); border-left: 4px solid var(--accent); padding: 25px 30px; color: var(--panelText); box-shadow: 10px 10px 40px rgba(0,0,0,0.6); z-index: 50; display: flex; flex-direction: column; position: relative; overflow: hidden; pointer-events: auto !important; border-radius: 0 8px 8px 0; }
         .view-container { display: flex; flex-direction: column; height: 100%; transition: opacity 0.2s; width: 100%; overflow-y: auto; }
         .view-container.hidden { display: none; opacity: 0; }
-        .panel-header { font-size: 24px; color: #eab543; margin-bottom: 20px; border-bottom: 1px solid #555; padding-bottom: 10px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .panel-header { font-size: 24px; color: var(--accent); margin-bottom: 20px; border-bottom: 1px solid var(--cardBorder); padding-bottom: 10px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
         .tab-bar { display:flex; gap:8px; margin-bottom:10px; justify-content:center; align-items:center; }
-        .tab-btn { background:#333; border:1px solid #555; color:#aaa; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:13px; }
-        .tab-btn.active { background:#eab543; color:#000; border-color:#eab543; }
+        .tab-btn { background:#333; border:1px solid var(--cardBorder); color:#aaa; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:13px; }
+        .tab-btn.active { background:var(--accent); color:#000; border-color:var(--accent); }
         /* 1. 普通输入框保持不变 */
         .cs-input, .add-input, .add-textarea { background: #111; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 4px; font-family: 'Microsoft YaHei'; cursor: text !important; width: 100%; color-scheme: dark; font-size: 14px; box-sizing: border-box; }
         /* 2. 下拉框单独设置（减小内边距，防止文字被切） */
         .add-select { background: #111; border: 1px solid #444; color: #fff; padding: 5px; border-radius: 4px; font-family: 'Microsoft YaHei'; cursor: pointer; width: 100%; color-scheme: dark; font-size: 14px; box-sizing: border-box; outline: none; }
-        .cs-input:focus, .add-input:focus, .add-select:focus { border-color: #eab543; outline: none; background: #000; }
+        .cs-input:focus, .add-input:focus, .add-select:focus { border-color: var(--accent); outline: none; background: #000; }
         .add-input:disabled, .add-select:disabled, .add-input[readonly] { background: #222; color: #777; border-color: #333; cursor: not-allowed !important; }
         .add-form { display: flex; flex-direction: column; gap: 15px; flex: 1; overflow-y: auto; padding-right: 5px; }
         .form-group { display: flex; flex-direction: column; gap: 5px; }
@@ -835,36 +857,36 @@
         .bug-fetch-btn:hover { background: #2ecc71; }
         .bug-fetch-btn.ex { background: #e67e22; }
         .bug-fetch-btn.ex:hover { background: #d35400; }
-        .action-btn { width: 100%; background: #eab543; color: #000; border: none; padding: 12px; font-weight: bold; font-size: 16px; cursor: pointer; border-radius: 4px; margin-top: 15px; transition: 0.2s; }
-        .action-btn:hover { background: #f1c40f; transform: translateY(-1px); }
+        .action-btn { width: 100%; background: var(--accent); color: #000; border: none; padding: 12px; font-weight: bold; font-size: 16px; cursor: pointer; border-radius: 4px; margin-top: 15px; transition: 0.2s; }
+        .action-btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
         .sub-btn { background: transparent; border: 1px solid #555; color: #aaa; margin-top: 10px; font-size: 13px; padding: 8px; width: 100%; cursor: pointer; border-radius: 4px; }
-        .sub-btn:hover { border-color: #eab543; color: #eab543; }
-        .stats-box { background: #222; padding: 20px; border: 1px solid #444; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; border-radius: 6px; }
+        .sub-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .stats-box { background: var(--cardBg); padding: 20px; border: 1px solid var(--cardBorder); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; border-radius: 6px; }
         .stat-item { text-align: center; flex: 1; }
-        .stat-val { font-size: 32px; color: #eab543; font-weight: bold; }
+        .stat-val { font-size: 32px; color: var(--accent); font-weight: bold; }
         .stat-lbl { font-size: 14px; color: #888; }
-        .grade-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; background: #1a1a1a; padding: 15px; border-radius: 6px; }
-        .grade-item { background: #2d2d2d; border: 1px solid #333; padding: 10px; text-align: center; border-radius: 4px; }
-        .grade-item.high-tier { border-color: #eab543; background: rgba(234, 181, 67, 0.1); }
+        .grade-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; background: var(--cardBg); padding: 15px; border-radius: 6px; }
+        .grade-item { background: var(--cardItemBg); border: 1px solid var(--cardBorder); padding: 10px; text-align: center; border-radius: 4px; }
+        .grade-item.high-tier { border-color: var(--accent); background: var(--accentSoft); }
         .g-val { font-size: 20px; font-weight: bold; color: #eee; }
-        .high-tier .g-val { color: #eab543; }
+        .high-tier .g-val { color: var(--accent); }
         .inventory-list { display: flex; flex-direction: column; gap: 10px; overflow-y:auto; max-height:450px; }
-        .inv-item { background: #222; border: 1px solid #333; padding: 12px; border-radius: 4px; display: flex; align-items: center; transition: 0.2s; }
-        .inv-item:hover { border-color: #eab543; background: #282828; }
+        .inv-item { background: var(--cardItemBg); border: 1px solid var(--cardBorder); padding: 12px; border-radius: 4px; display: flex; align-items: center; transition: 0.2s; }
+        .inv-item:hover { border-color: var(--accent); background: var(--cardHoverBg); }
         .inv-del { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; color: #e74c3c; cursor: pointer; font-size: 16px; margin-left: 10px; border-radius: 4px; }
         .inv-del:hover { background: rgba(231, 76, 60, 0.2); }
         .proj-search-wrapper { position: relative; display: flex; gap: 5px; }
-        .proj-dropdown { position: absolute; top: 100%; left: 0; width: 100%; max-height: 250px; overflow-y: auto; background: #222; border: 1px solid #444; z-index: 100; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .proj-dropdown { position: absolute; top: 100%; left: 0; width: 100%; max-height: 250px; overflow-y: auto; background: var(--cardItemBg); border: 1px solid var(--cardBorder); z-index: 100; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         /* 增加了 word-break 和 white-space 属性 */
         .proj-option { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #333; font-size: 14px; transition: 0.1s; white-space: normal; word-break: break-word; line-height: 1.4; }
-        .proj-option:hover { background: #eab543; color: #000; }
-        .proj-refresh-btn { width: 35px; background: #333; border: 1px solid #444; color: #eab543; cursor: pointer; display:flex; align-items:center; justify-content:center; font-size:16px; border-radius:4px; }
+        .proj-option:hover { background: var(--accent); color: #000; }
+        .proj-refresh-btn { width: 35px; background: #333; border: 1px solid #444; color: var(--accent); cursor: pointer; display:flex; align-items:center; justify-content:center; font-size:16px; border-radius:4px; }
         .proj-refresh-btn:hover { background: #444; }
-        .manual-btn { margin-top: 20px; background: #333; color: #888; border: 1px solid #444; padding: 8px 20px; border-radius: 20px; cursor: pointer; font-size: 12px; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
-        .manual-btn:hover { color: #eab543; border-color: #eab543; background: #222; }
-        #manual-modal { position: fixed; top: 10%; right: 10%; width: 600px; max-height: 80vh; background: rgba(30,30,30,0.95); border: 2px solid #eab543; z-index: 2147483648; display: none; overflow-y: auto; color: #ccc; border-radius: 8px; backdrop-filter: blur(10px); box-shadow: 0 0 50px rgba(0,0,0,0.8); cursor: default; }
-        .manual-header { padding: 15px; background: rgba(234, 181, 67, 0.1); border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none; }
-        .manual-header h2 { margin: 0; color: #eab543; font-size: 18px; }
+        .manual-btn { margin-top: 20px; background: #333; color: #888; border: 1px solid var(--cardBorder); padding: 8px 20px; border-radius: 20px; cursor: pointer; font-size: 12px; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
+        .manual-btn:hover { color: var(--accent); border-color: var(--accent); background: #222; }
+        #manual-modal { position: fixed; top: 10%; right: 10%; width: 600px; max-height: 80vh; background: var(--modalBg); border: 2px solid var(--accent); z-index: 2147483648; display: none; overflow-y: auto; color: var(--panelText); border-radius: 8px; backdrop-filter: blur(var(--modalBlur)); box-shadow: 0 0 50px rgba(0,0,0,0.8); cursor: default; }
+        .manual-header { padding: 15px; background: var(--accentSoft); border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none; }
+        .manual-header h2 { margin: 0; color: var(--accent); font-size: 18px; }
         .manual-content { padding: 20px; font-size: 14px; line-height: 1.6; }
         .manual-content h3 { color: #fff; border-bottom: 1px solid #555; padding-bottom: 5px; margin-top: 20px; }
         .manual-content ul { padding-left: 20px; }
@@ -872,14 +894,14 @@
         .close-manual { color: #888; cursor: pointer; font-size: 24px; transition: 0.2s; }
         .close-manual:hover { color: #fff; }
         .auth-section { background: #252525; padding: 20px; border: 1px solid #444; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        .auth-section-title { position: static; background: transparent; font-size: 16px; color: #eab543; font-weight: bold; margin-bottom: 15px; display: block; border-left: 3px solid #eab543; padding-left: 10px; }
+        .auth-section-title { position: static; background: transparent; font-size: 16px; color: var(--accent); font-weight: bold; margin-bottom: 15px; display: block; border-left: 3px solid var(--accent); padding-left: 10px; }
         .auth-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
         .auth-label { font-size: 13px; color: #ccc; font-weight: bold; }
         .auth-input { width: 100%; box-sizing: border-box; background: #111; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 4px; font-size: 14px; transition: 0.2s; }
-        .auth-input:focus { border-color: #eab543; background: #000; outline: none; }
-        .ts-table th, .ts-table td { border-bottom: 1px solid #444; padding: 8px; }
+        .auth-input:focus { border-color: var(--accent); background: #000; outline: none; }
+        .ts-table th, .ts-table td { border-bottom: 1px solid var(--cardBorder); padding: 8px; }
         .ts-tag { display:inline-block; padding:2px 6px; border-radius:3px; font-size:12px; color:#000; margin-right:4px; }
-        .ts-tag-dev { background:#eab543; }
+        .ts-tag-dev { background:var(--accent); }
         .ts-tag-pre { background:#27ae60; color:#fff; }
         .ts-tag-com { background:#3498db; color:#fff; }
     `;
@@ -896,6 +918,7 @@
         overlay.innerHTML = `
             <div class="csgo-container">
                 <div class="left-section">
+                    
                     <div class="wheel-wrapper" id="wheel-wrapper">
                         <div class="wheel-sensor" id="wheel-sensor"></div>
                         <div class="center-hub" id="wheel-hub"><span class="hub-text">MENU</span></div>
@@ -904,7 +927,36 @@
                             <div id="wheel-labels"></div>
                         </div>
                     </div>
-                    <button id="btn-open-manual" class="manual-btn">📘 版本说明书 (V44.2)</button>
+                    <div id="left-controls" style="display:flex; flex-direction:column; gap:10px; align-items:center; margin-top: 24px;">
+                        <button id="btn-open-manual" class="manual-btn" style="margin-top:0;">📘 版本说明书 (V44.3)</button>
+                        <div id="theme-toolbar" style="display:flex; gap:8px; align-items:center; background: var(--cardBg); border: 1px solid var(--cardBorder); border-radius: 20px; padding: 6px 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                            <span style="color:#888; font-size:12px;">🎨 主题</span>
+                            <select id="theme-select" class="add-select" style="width:200px; height:28px; padding:4px 8px;">
+                                <option value="gold">黑金</option>
+                                <option value="blue">蓝紫</option>
+                                <option value="green">青绿</option>
+                                <option value="purple">紫色</option>
+                                <option value="red">红黑</option>
+                                <option value="cream">奶油白</option>
+                                <option value="mint">薄荷绿</option>
+                                <option value="teal">墨青</option>
+                                <option value="olive">橄榄绿</option>
+                                <option value="forest">森林绿</option>
+                                <option value="slate">岩灰</option>
+                                <option value="cyan">青色</option>
+                                <option value="amber">琥珀</option>
+                                <option value="neutral">中性灰</option>
+                                <option value="greige">米灰</option>
+                                <option value="emerald">祖母绿</option>
+                                <option value="navy">海军蓝</option>
+                                <option value="mauve">暮紫</option>
+                                <option value="seasalt">海盐蓝</option>
+                                <option value="graphite">石墨黑</option>
+                                <option value="dawn">晨曦粉</option>
+                            </select>
+                        </div>
+                    </div>
+                    
                 </div>
 
                 <div class="info-panel" id="panel-right" style="opacity:0; pointer-events:none;">
@@ -920,7 +972,7 @@
                             <div class="stat-item"><div class="stat-val" id="disp-hours">0h</div><div class="stat-lbl">总工时</div></div>
                         </div>
                         <div class="grade-grid" id="grade-grid"></div>
-                        <div id="status-bar" style="color: #eab543; font-size: 13px; margin-bottom: 10px; height: 20px; text-align:center;">就绪</div>
+                        <div id="status-bar" style="color: var(--accent); font-size: 13px; margin-bottom: 10px; height: 20px; text-align:center;">就绪</div>
                         <button id="btn-buy" class="action-btn">确认查询</button>
                     </div>
 
@@ -949,7 +1001,7 @@
                             <div class="form-group"><label class="form-label">内容</label><textarea id="add-content" class="add-textarea" placeholder="工作内容..."></textarea></div>
                             <div class="form-group"><label class="form-label">备注</label><input type="text" id="add-note" class="add-input" placeholder="选填"></div>
                         </div>
-                        <div id="add-status" style="color: #eab543; font-size: 13px; margin: 5px 0; text-align:center;"></div>
+                        <div id="add-status" style="color: var(--accent); font-size: 13px; margin: 5px 0; text-align:center;"></div>
                         <button id="btn-submit-work" class="action-btn">提交工作量</button>
                     </div>
 
@@ -1021,7 +1073,7 @@
                             <div class="form-row"><div class="form-group" style="flex:1"><label class="form-label">工时</label><input type="number" id="ts-hours" class="add-input" value="8"></div>
                                 <div class="form-group" style="flex:1"><label class="form-label">检查人</label><select id="ts-reviewer" class="add-select"><option>加载中...</option></select></div>
                             </div>
-                            <div id="ts-edit-tip" style="display:none; color:#eab543; font-size:12px;">当前编辑记录ID: <span id="ts-edit-id"></span></div>
+                            <div id="ts-edit-tip" style="display:none; color: var(--accent); font-size:12px;">当前编辑记录ID: <span id="ts-edit-id"></span></div>
                             <button id="ts-btn-copy-yesterday" class="action-btn" style="width:100%;">参考昨日填写</button>
                             <button id="ts-btn-submit" class="action-btn">提交保存</button>
                         </div>
@@ -1070,9 +1122,9 @@
                     <div id="view-history" class="view-container hidden">
                         <div class="panel-header"><div>📜 填报历史</div><div style="font-size:12px;color:#666;">core 44，作者DJ</div></div>
                         <div class="hist-summary" style="display:flex; justify-content:space-around; margin-bottom:15px; background:#222; padding:10px; border-radius:4px;">
-                            <div class="hist-sum-item"><div>本月已填</div><div class="hist-sum-val" id="hist-month-val" style="color:#eab543; font-weight:bold;">0h</div></div>
+                            <div class="hist-sum-item"><div>本月已填</div><div class="hist-sum-val" id="hist-month-val" style="color: var(--accent); font-weight:bold;">0h</div></div>
                             <div style="width:1px; background:#444;"></div>
-                            <div class="hist-sum-item"><div>本季已填</div><div class="hist-sum-val" id="hist-quarter-val" style="color:#eab543; font-weight:bold;">0h</div></div>
+                            <div class="hist-sum-item"><div>本季已填</div><div class="hist-sum-val" id="hist-quarter-val" style="color: var(--accent); font-weight:bold;">0h</div></div>
                         </div>
                         <div id="inventory-list" class="inventory-list"></div>
                         <button id="btn-clear-hist" class="sub-btn">清空历史</button>
@@ -1081,7 +1133,7 @@
             </div>
 
             <div id="manual-modal">
-                <div class="manual-header" id="manual-header"><h2>📘 DJWebTool操作手册 V44.2</h2><div class="close-manual" id="close-manual">×</div></div>
+                <div class="manual-header" id="manual-header"><h2>📘 DJWebTool操作手册 V44.3</h2><div class="close-manual" id="close-manual">×</div></div>
                 <div class="manual-content">
                     <h3>❤️ V44.2 版本更新</h3>
                     <ul>
@@ -1242,6 +1294,21 @@
                 </div>
             </div>
         `;
+
+        const themeSelect = overlay.querySelector('#theme-select');
+        const savedTheme = GM_getValue(KEY_THEME, 'gold');
+        const themesAll = ['gold','blue','green','purple','red','cream','mint','teal','olive','forest','slate','cyan','amber','neutral','greige','emerald','navy','mauve','seasalt','graphite','dawn'];
+        themesAll.forEach(t=>overlay.classList.remove('theme-'+t));
+        overlay.classList.add('theme-' + savedTheme);
+        if (themeSelect) {
+            themeSelect.value = savedTheme;
+            themeSelect.addEventListener('change', function(){
+                const name = themeSelect.value;
+                themesAll.forEach(t=>overlay.classList.remove('theme-'+t));
+                overlay.classList.add('theme-' + name);
+                GM_setValue(KEY_THEME, name);
+            });
+        }
         document.body.appendChild(overlay);
 
         // 绑定数据与事件
@@ -2153,7 +2220,7 @@
             const d = new Date(item.workDate);
             if(d.getFullYear() === now.getFullYear()) { if(d.getMonth() === curM) mTotal += item.hours; if(Math.floor(d.getMonth()/3) === curQ) qTotal += item.hours; }
             const div = document.createElement('div'); div.className = 'inv-item';
-            div.innerHTML = `<div style="flex:1"><div style="font-weight:bold;color:#eab543">${item.bug} <span style="font-size:12px;color:#666">${item.workDate}</span></div><div style="font-size:12px;color:#aaa">${item.content}</div></div><div style="font-weight:bold">${item.hours}h</div><div class="inv-del">×</div>`;
+            div.innerHTML = `<div style="flex:1"><div style="font-weight:bold;color: var(--accent)">${item.bug} <span style="font-size:12px;color:#666">${item.workDate}</span></div><div style="font-size:12px;color:#aaa">${item.content}</div></div><div style="font-weight:bold">${item.hours}h</div><div class="inv-del">×</div>`;
             div.querySelector('.inv-del').onclick = (e) => { e.stopPropagation(); if(confirm('删除记录?')) { hist.splice(idx, 1); GM_setValue(STORAGE_KEY_SUBMIT_HISTORY, JSON.stringify(hist)); renderHistory(); }};
             list.appendChild(div);
         });
