@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         工时统计助手 - CS:GO UI轮盘版 (V44.1)
+// @name         工时统计助手 - CS:GO UI轮盘版 (V44.2)
 // @namespace    http://tampermonkey.net/
-// @version      44.1
-// @description  新增工时系统模块
+// @version      44.2
+// @description  薪资查询支持跨年份查询+修复关闭再打开面板表单消失问题
 // @match        *://*/*
 // @include      file:///*
 // @updateURL    https://raw.githubusercontent.com/junchengdu57-dev/DJtools/main/CsgoWebTool.user.js
@@ -24,7 +24,7 @@
 (function() {
     'use strict';
 
-    console.log("🔥 [CS:GO] V44.1 启动 - Core 44.1，作者DJ");
+    console.log("🔥 [CS:GO] V44.2 启动 - Core 44.2，作者DJ");
 
     // ================= V41 核心配置 (绝对保留) =================
     const DOMAIN_BASE = "http://work.cqdev.top";
@@ -462,6 +462,8 @@
         const year = document.getElementById('mw-year').value;
         const start = parseInt(document.getElementById('mw-start').value);
         const end = parseInt(document.getElementById('mw-end').value);
+        const ymStart = (document.getElementById('mw-ym-start') && document.getElementById('mw-ym-start').value) || '';
+        const ymEnd = (document.getElementById('mw-ym-end') && document.getElementById('mw-ym-end').value) || '';
         if(!mw.emp || !mw.pwd) { alert("请先在【账号设置】中配置Mobiwire工号和密码"); return; }
         const log = (msg) => { logBox.innerHTML += `<div>${msg}</div>`; logBox.scrollTop = logBox.scrollHeight; };
         btn.disabled = true; logBox.innerHTML = "> 🚀 初始化...<br>";
@@ -470,21 +472,50 @@
         if (!redirectUrl) { log("❌ 登录失败"); btn.disabled = false; return; }
         const finalReferer = await step3_follow(redirectUrl);
         log("✅ 登录成功，开始采集全量数据...");
-        let allMonthsData = []; let allKeys = new Set(["月份", "应发薪资", "实发工资(银行转账)"]);
-        for(let m=start; m<=end; m++) {
-            log(`📡 扫描 ${m}月明细...`);
-            const res = await step4_query(year, m, finalReferer);
-            if(res.error) { log(`⚠️ ${m}月 Session失效`); continue; }
-            if(res.hasData) {
-                res.data["月份"] = `${m}月`;
-                Object.keys(res.data).forEach(k => allKeys.add(k));
-                allMonthsData.push(res.data);
-                const net = res.data["实发工资(银行转账)"] || 0;
-                log(`✅ ${m}月 实发: ${net}`);
-            } else {
-                log(`⚪ ${m}月: 无数据`);
+        let allMonthsData = []; let allKeys = new Set(["月份", "应发薪资", "实发工资(银行转账)"]); 
+        let nameSuffix = year;
+        if (ymStart && ymEnd) {
+            const partsS = ymStart.split('-');
+            const partsE = ymEnd.split('-');
+            const y1 = parseInt(partsS[0], 10); const m1 = parseInt(partsS[1], 10);
+            const y2 = parseInt(partsE[0], 10); const m2 = parseInt(partsE[1], 10);
+            if (isNaN(y1) || isNaN(m1) || isNaN(y2) || isNaN(m2)) { alert("起止年月无效"); btn.disabled = false; return; }
+            if (y1 > y2 || (y1 === y2 && m1 > m2)) { alert("起止年月范围不合法"); btn.disabled = false; return; }
+            nameSuffix = `${y1}${String(m1).padStart(2,'0')}-${y2}${String(m2).padStart(2,'0')}`;
+            let y = y1; let m = m1;
+            while (y < y2 || (y === y2 && m <= m2)) {
+                log(`📡 扫描 ${y}-${m} 明细...`);
+                const res = await step4_query(y, m, finalReferer);
+                if(res.error) { log(`⚠️ ${y}-${m} Session失效`); }
+                else if(res.hasData) {
+                    res.data["月份"] = `${y}-${String(m).padStart(2,'0')}`;
+                    Object.keys(res.data).forEach(k => allKeys.add(k));
+                    allMonthsData.push(res.data);
+                    const net = res.data["实发工资(银行转账)"] || 0;
+                    log(`✅ ${y}-${m} 实发: ${net}`);
+                } else {
+                    log(`⚪ ${y}-${m}: 无数据`);
+                }
+                await new Promise(r => setTimeout(r, 400));
+                m++;
+                if (m > 12) { m = 1; y++; }
             }
-            await new Promise(r => setTimeout(r, 400));
+        } else {
+            for(let m=start; m<=end; m++) {
+                log(`📡 扫描 ${m}月明细...`);
+                const res = await step4_query(year, m, finalReferer);
+                if(res.error) { log(`⚠️ ${m}月 Session失效`); continue; }
+                if(res.hasData) {
+                    res.data["月份"] = `${m}月`;
+                    Object.keys(res.data).forEach(k => allKeys.add(k));
+                    allMonthsData.push(res.data);
+                    const net = res.data["实发工资(银行转账)"] || 0;
+                    log(`✅ ${m}月 实发: ${net}`);
+                } else {
+                    log(`⚪ ${m}月: 无数据`);
+                }
+                await new Promise(r => setTimeout(r, 400));
+            }
         }
         if (allMonthsData.length === 0) { log("❌ 没有查询到任何数据"); btn.disabled = false; return; }
         const headers = Array.from(allKeys);
@@ -499,7 +530,7 @@
         csvContent += totalRow.join(",") + "\n" + avgRow.join(",") + "\n";
         const blob = new Blob([csvContent], {type:'text/csv;charset=utf-8'});
         const url = URL.createObjectURL(blob);
-        log(`<a href="${url}" download="Mobiwire薪资_${year}.csv" style="color:yellow">📥 下载薪资报表</a>`);
+        log(`<a href="${url}" download="Mobiwire薪资_${nameSuffix}.csv" style="color:yellow">📥 下载薪资报表</a>`);
         btn.disabled = false;
     }
 
@@ -873,7 +904,7 @@
                             <div id="wheel-labels"></div>
                         </div>
                     </div>
-                    <button id="btn-open-manual" class="manual-btn">📘 版本说明书 (V44.1)</button>
+                    <button id="btn-open-manual" class="manual-btn">📘 版本说明书 (V44.2)</button>
                 </div>
 
                 <div class="info-panel" id="panel-right" style="opacity:0; pointer-events:none;">
@@ -935,6 +966,12 @@
                                 <select id="mw-start" class="add-select" style="width:90px; height:28px; padding:4px 8px;">${makeMonthOpts(1)}</select>
                                 <span>至</span>
                                 <select id="mw-end" class="add-select" style="width:90px; height:28px; padding:4px 8px;">${makeMonthOpts(12)}</select>
+                            </div>
+                            <div style="display:flex; gap:12px; justify-content:center; margin-bottom:15px; align-items:center;">
+                                <span>跨年份</span>
+                                <input type="month" id="mw-ym-start" class="cs-input" style="width:140px; height:28px; padding:4px 8px;">
+                                <span>至</span>
+                                <input type="month" id="mw-ym-end" class="cs-input" style="width:140px; height:28px; padding:4px 8px;">
                             </div>
                             <button id="btn-load-salary" class="action-btn">生成薪资报表</button>
                             <div id="mw-log" style="color:#888; font-size:12px; margin-top:10px; text-align:left; height:300px; overflow-y:auto; background:#111; padding:10px; border-radius:4px;">等待查询...</div>
@@ -1044,8 +1081,20 @@
             </div>
 
             <div id="manual-modal">
-                <div class="manual-header" id="manual-header"><h2>📘 DJWebTool操作手册 V44.1</h2><div class="close-manual" id="close-manual">×</div></div>
+                <div class="manual-header" id="manual-header"><h2>📘 DJWebTool操作手册 V44.2</h2><div class="close-manual" id="close-manual">×</div></div>
                 <div class="manual-content">
+                    <h3>❤️ V44.2 版本更新</h3>
+                    <ul>
+                        <li>
+                        <strong> 薪资查询及表单显示修复调整</strong>
+                        <li>
+                            薪资查询支持跨年份查询
+                        </li>
+                        <li>
+                            修复关闭再打开面板表单消失问题
+                        </li>
+                        </li>
+                    </ul>
                     <h3>😀 V44.1 版本更新</h3>
                     <ul>
                         <li>
@@ -1730,10 +1779,9 @@
         const newState = forceState !== undefined ? forceState : !isActive;
         if (newState) {
             overlay.classList.add('active');
-            document.querySelectorAll('.view-container').forEach(el => el.classList.add('hidden'));
-            document.getElementById('panel-right').style.opacity = '0';
-            document.getElementById('panel-right').style.pointerEvents = 'none';
-        } else overlay.classList.remove('active');
+        } else {
+            overlay.classList.remove('active');
+        }
     }
     function bindGlobalKeys() {
         document.addEventListener('keydown', (e) => { if (e.altKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); toggleOverlay(); }});
