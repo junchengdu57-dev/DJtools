@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         工时统计助手 - CS:GO UI轮盘版 (V44.3)
+// @name         工时统计助手 - CS:GO UI轮盘版 (V44.4)
 // @namespace    http://tampermonkey.net/
-// @version      44.3
-// @description  薪资查询支持跨年份查询+修复关闭再打开面板表单消失问题
+// @version      44.4
+// @description  修复加班耗时统计，统计周末加班数据（算法代码由wyy提供）
 // @match        *://*/*
 // @include      file:///*
 // @updateURL    https://raw.githubusercontent.com/junchengdu57-dev/DJtools/main/CsgoWebTool.user.js
@@ -24,7 +24,7 @@
 (function() {
     'use strict';
 
-    console.log("🔥 [CS:GO] V44.3 启动 - Core 44.3，作者DJ");
+    console.log("🔥 [CS:GO] V44.4 启动 - Core 44.4，作者DJ");
 
     // ================= V41 核心配置 (绝对保留) =================
     const DOMAIN_BASE = "http://work.cqdev.top";
@@ -392,17 +392,47 @@
         return { hasData, data: monthData };
     }
 
-    function calcOT(timeStr) {
-        if (!timeStr || !timeStr.includes(':')) return 0;
-        const parts = timeStr.split(':');
-        const h = parseInt(parts[0], 10);
-        const m = parseInt(parts[1], 10);
-        if (h === 0 && m === 0) return 0;
-        const totalMin = h * 60 + m;
-        const standardMin = 17 * 60 + 30;
-        if (totalMin > standardMin) return parseFloat(((totalMin - standardMin) / 60).toFixed(2));
+// 修改并增强后的加班计算逻辑
+function calcOT(schedule, clockIn, clockOut) {
+    // 1. 如果没有下班打卡时间，直接返回0
+    if (!clockOut || !clockOut.includes(':')) return 0;
+    
+    // 解析下班时间
+    const outParts = clockOut.split(':');
+    const outH = parseInt(outParts[0], 10) || 0;
+    const outM = parseInt(outParts[1], 10) || 0;
+    if (outH === 0 && outM === 0) return 0;
+    const outTotalMin = outH * 60 + outM;
+
+    // 2. 判断是否为“休息班”
+    // 只要排班名称里包含"休息班"三个字，就走这里的逻辑
+    if (schedule && schedule.includes("休息班")) {
+        if (!clockIn || !clockIn.includes(':')) return 0;
+        // 解析上班时间
+        const inParts = clockIn.split(':');
+        const inH = parseInt(inParts[0], 10) || 0;
+        const inM = parseInt(inParts[1], 10) || 0;
+        const inTotalMin = inH * 60 + inM;
+        
+        // 休息班加班时间 = 下班时间 - 上班时间
+        if (outTotalMin > inTotalMin) {
+            const ot = parseFloat(((outTotalMin - inTotalMin) / 60).toFixed(2));
+            console.log(`[TranAI调试] 匹配到休息班! 日程:${schedule}, 上班:${clockIn}, 下班:${clockOut}, 计算加班:${ot}小时`);
+            return ot;
+        }
         return 0;
     }
+
+    // 3. 常白班及其他默认情况（以 17:30 为基准）
+    const standardMin = 17 * 60 + 30;
+    if (outTotalMin > standardMin) {
+        const ot = parseFloat(((outTotalMin - standardMin) / 60).toFixed(2));
+        console.log(`[TranAI调试] 匹配到常白班! 日程:${schedule}, 下班:${clockOut}, 计算加班:${ot}小时`);
+        return ot;
+    }
+    
+    return 0;
+}
 
     async function queryAttendanceByMonth(year, month) {
         const firstDay = `${year}-${month}-1`;
@@ -439,7 +469,7 @@
                 const meal = parseFloat(tds[11].innerText.trim()) || 0;
                 let cleanLate = lateEarly;
                 if (lateEarly === 480) cleanLate = 0;
-                const myOT = calcOT(clockOut);
+                const myOT = calcOT(schedule, clockIn, clockOut);
                 records.push({ year, month, date, schedule, shiftStart, shiftEnd, clockIn, clockOut, lateEarly, cleanLate, noPayAbsence, payAbsence, paidOT, actualHours, meal, myOT });
             }
         });
@@ -1135,6 +1165,15 @@
             <div id="manual-modal">
                 <div class="manual-header" id="manual-header"><h2>📘 DJWebTool操作手册 V44.3</h2><div class="close-manual" id="close-manual">×</div></div>
                 <div class="manual-content">
+					<h3>❤️ V44.3 版本更新</h3>
+                    <ul>
+                        <li>
+                        <strong> 考勤修复调整</strong>
+                        <li>
+                            加班时长会统计进周末数据
+                        </li>
+                        </li>
+                    </ul>
                     <h3>❤️ V44.2 版本更新</h3>
                     <ul>
                         <li>
