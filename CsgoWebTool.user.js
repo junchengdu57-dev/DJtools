@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         工时统计助手 - CS:GO UI轮盘版 (V44.4)
+// @name         工时统计助手 - CS:GO UI轮盘版 (V44.5)
 // @namespace    http://tampermonkey.net/
-// @version      44.4
-// @description  修复加班耗时统计，统计周末加班数据（算法代码由wyy提供）
+// @version      44.5
+// @description  优化工时系统查询往日记录逻辑，解决往日多条或在周一/请假的时候选择参考昨日填写，获取不了的问题
 // @match        *://*/*
 // @include      file:///*
 // @updateURL    https://raw.githubusercontent.com/junchengdu57-dev/DJtools/main/CsgoWebTool.user.js
@@ -24,7 +24,7 @@
 (function() {
     'use strict';
 
-    console.log("🔥 [CS:GO] V44.4 启动 - Core 44.4，作者DJ");
+    console.log("🔥 [CS:GO] V44.5 启动 - Core 44.5，作者DJ");
 
     // ================= V41 核心配置 (绝对保留) =================
     const DOMAIN_BASE = "http://work.cqdev.top";
@@ -396,7 +396,7 @@
 function calcOT(schedule, clockIn, clockOut) {
     // 1. 如果没有下班打卡时间，直接返回0
     if (!clockOut || !clockOut.includes(':')) return 0;
-    
+
     // 解析下班时间
     const outParts = clockOut.split(':');
     const outH = parseInt(outParts[0], 10) || 0;
@@ -413,7 +413,7 @@ function calcOT(schedule, clockIn, clockOut) {
         const inH = parseInt(inParts[0], 10) || 0;
         const inM = parseInt(inParts[1], 10) || 0;
         const inTotalMin = inH * 60 + inM;
-        
+
         // 休息班加班时间 = 下班时间 - 上班时间
         if (outTotalMin > inTotalMin) {
             const ot = parseFloat(((outTotalMin - inTotalMin) / 60).toFixed(2));
@@ -430,7 +430,7 @@ function calcOT(schedule, clockIn, clockOut) {
         console.log(`[TranAI调试] 匹配到常白班! 日程:${schedule}, 下班:${clockOut}, 计算加班:${ot}小时`);
         return ot;
     }
-    
+
     return 0;
 }
 
@@ -503,7 +503,7 @@ function calcOT(schedule, clockIn, clockOut) {
         if (!redirectUrl) { log("❌ 登录失败"); btn.disabled = false; return; }
         const finalReferer = await step3_follow(redirectUrl);
         log("✅ 登录成功，开始采集全量数据...");
-        let allMonthsData = []; let allKeys = new Set(["月份", "应发薪资", "实发工资(银行转账)"]); 
+        let allMonthsData = []; let allKeys = new Set(["月份", "应发薪资", "实发工资(银行转账)"]);
         let nameSuffix = year;
         if (ymStart && ymEnd) {
             const partsS = ymStart.split('-');
@@ -948,7 +948,7 @@ function calcOT(schedule, clockIn, clockOut) {
         overlay.innerHTML = `
             <div class="csgo-container">
                 <div class="left-section">
-                    
+
                     <div class="wheel-wrapper" id="wheel-wrapper">
                         <div class="wheel-sensor" id="wheel-sensor"></div>
                         <div class="center-hub" id="wheel-hub"><span class="hub-text">MENU</span></div>
@@ -958,7 +958,7 @@ function calcOT(schedule, clockIn, clockOut) {
                         </div>
                     </div>
                     <div id="left-controls" style="display:flex; flex-direction:column; gap:10px; align-items:center; margin-top: 24px;">
-                        <button id="btn-open-manual" class="manual-btn" style="margin-top:0;">📘 版本说明书 (V44.3)</button>
+                        <button id="btn-open-manual" class="manual-btn" style="margin-top:0;">📘 版本说明书 (V44.5)</button>
                         <div id="theme-toolbar" style="display:flex; gap:8px; align-items:center; background: var(--cardBg); border: 1px solid var(--cardBorder); border-radius: 20px; padding: 6px 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
                             <span style="color:#888; font-size:12px;">🎨 主题</span>
                             <select id="theme-select" class="add-select" style="width:200px; height:28px; padding:4px 8px;">
@@ -986,12 +986,12 @@ function calcOT(schedule, clockIn, clockOut) {
                             </select>
                         </div>
                     </div>
-                    
+
                 </div>
 
                 <div class="info-panel" id="panel-right" style="opacity:0; pointer-events:none;">
                     <div id="view-query" class="view-container hidden">
-                        <div class="panel-header"><div>📊 工作量统计</div><div style="font-size:12px;color:#666;">core 44，作者DJ</div></div>
+                        <div class="panel-header"><div>📊 工作量统计</div><div style="font-size:12px;color:#666;">core 44.5，作者DJ</div></div>
                         <div class="date-row" style="display:flex; gap:10px; margin-bottom:15px;">
                             <input type="date" id="cs-start" class="cs-input">
                             <input type="date" id="cs-end" class="cs-input">
@@ -1007,7 +1007,7 @@ function calcOT(schedule, clockIn, clockOut) {
                     </div>
 
                     <div id="view-add" class="view-container hidden">
-                        <div class="panel-header"><div>📝 填写工作量</div><div style="font-size:12px;color:#666;">core 44，作者DJ</div></div>
+                        <div class="panel-header"><div>📝 填写工作量</div><div style="font-size:12px;color:#666;">core 44.5，作者DJ</div></div>
                         <div class="add-form">
                             <div class="form-row"><div class="form-group" style="flex:1"><label class="form-label">开始日期</label><input type="date" id="add-start" class="add-input"></div><div class="form-group" style="flex:1"><label class="form-label">完成日期</label><input type="date" id="add-end" class="add-input"></div></div>
                             <div class="form-group proj-search-wrapper">
@@ -1036,7 +1036,7 @@ function calcOT(schedule, clockIn, clockOut) {
                     </div>
 
                     <div id="view-salary" class="view-container hidden">
-                        <div class="panel-header"><div>💰 薪资/考勤查询 (Mobiwire)</div><div style="font-size:12px;color:#666;">core 44，作者DJ</div></div>
+                        <div class="panel-header"><div>💰 薪资/考勤查询 (Mobiwire)</div><div style="font-size:12px;color:#666;">core 44.5，作者DJ</div></div>
                         <div class="tab-bar">
                             <button id="tab-salary" class="tab-btn active">查询薪资</button>
                             <button id="tab-att" class="tab-btn">查询考勤</button>
@@ -1076,7 +1076,7 @@ function calcOT(schedule, clockIn, clockOut) {
                     </div>
 
                     <div id="view-timesheet" class="view-container hidden">
-                        <div class="panel-header"><div>⏱️ 工时系统</div><div style="font-size:12px;color:#666;">core 44，作者DJ</div></div>
+                        <div class="panel-header"><div>⏱️ 工时系统</div><div style="font-size:12px;color:#666;">core 44.5，作者DJ</div></div>
                         <div class="tab-bar">
                             <button id="ts-tab-fill" class="tab-btn active">填写</button>
                             <button id="ts-tab-query" class="tab-btn">查询/管理</button>
@@ -1105,6 +1105,7 @@ function calcOT(schedule, clockIn, clockOut) {
                             </div>
                             <div id="ts-edit-tip" style="display:none; color: var(--accent); font-size:12px;">当前编辑记录ID: <span id="ts-edit-id"></span></div>
                             <button id="ts-btn-copy-yesterday" class="action-btn" style="width:100%;">参考昨日填写</button>
+                        <div id="ts-copy-picker" style="display:none; margin-top:10px; background: var(--cardBg); border:1px solid var(--cardBorder); border-radius:6px; padding:10px;"></div>
                             <button id="ts-btn-submit" class="action-btn">提交保存</button>
                         </div>
                         <div id="ts-panel-query" style="display:none;">
@@ -1128,7 +1129,7 @@ function calcOT(schedule, clockIn, clockOut) {
 
 
                     <div id="view-settings" class="view-container hidden">
-                        <div class="panel-header"><div>⚙️ 账号设置</div><div style="font-size:12px;color:#666;">core 44，作者DJ</div></div>
+                        <div class="panel-header"><div>⚙️ 账号设置</div><div style="font-size:12px;color:#666;">core 44.5，作者DJ</div></div>
                         <div class="auth-form">
                             <div class="auth-section">
                                 <div class="auth-section-title">工作量系统 (Sagereal)</div>
@@ -1150,7 +1151,7 @@ function calcOT(schedule, clockIn, clockOut) {
                     </div>
 
                     <div id="view-history" class="view-container hidden">
-                        <div class="panel-header"><div>📜 填报历史</div><div style="font-size:12px;color:#666;">core 44，作者DJ</div></div>
+                        <div class="panel-header"><div>📜 填报历史</div><div style="font-size:12px;color:#666;">core 44.5，作者DJ</div></div>
                         <div class="hist-summary" style="display:flex; justify-content:space-around; margin-bottom:15px; background:#222; padding:10px; border-radius:4px;">
                             <div class="hist-sum-item"><div>本月已填</div><div class="hist-sum-val" id="hist-month-val" style="color: var(--accent); font-weight:bold;">0h</div></div>
                             <div style="width:1px; background:#444;"></div>
@@ -1163,9 +1164,18 @@ function calcOT(schedule, clockIn, clockOut) {
             </div>
 
             <div id="manual-modal">
-                <div class="manual-header" id="manual-header"><h2>📘 DJWebTool操作手册 V44.3</h2><div class="close-manual" id="close-manual">×</div></div>
+                <div class="manual-header" id="manual-header"><h2>📘 DJWebTool操作手册 V44.5</h2><div class="close-manual" id="close-manual">×</div></div>
                 <div class="manual-content">
-					<h3>❤️ V44.3 版本更新</h3>
+                    <h3>❤️ V44.5 版本更新</h3>
+                    <ul>
+                        <li>
+                        <strong> 工时系统修复</strong>
+                        <li>
+                            工时系统参考往日修改功能完善，可以支持多条选择
+                        </li>
+                        </li>
+                    </ul>
+					<h3>❤️ V44.4 版本更新</h3>
                     <ul>
                         <li>
                         <strong> 考勤修复调整</strong>
@@ -2229,9 +2239,40 @@ function calcOT(schedule, clockIn, clockOut) {
 
     function handleTsCopyYesterday() {
         const token = TS_TOKEN; const uid = TS_UID; if(!token) return alert('请先登录');
-        const today = new Date(); const yesterday = new Date(today); yesterday.setDate(yesterday.getDate()-1); const yStr = yesterday.toISOString().split('T')[0]; const btn = document.getElementById('ts-btn-copy-yesterday'); if(!btn) return; const originalText = btn.innerText; btn.innerText='查询中...'; btn.disabled=true;
-        const payload = { currPage: 1, pageSize: 10, dataForm: { workTimes: [`${yStr} 00:00:00`, `${yStr} 23:59:59`], creatorId: uid, workloadType: "", preResearchProjectId: "", commonProjectId: "", projectCategory: "", outerProjectCategory: "", businessDepartment: "", workloadNpiNode: "", productForm: "", workModuleId: "", workSubModuleId: "", workContent: "", workHour: "", remark: "", inspectorId: "", checkStatus: "", checkTimes: [], checkFeedback: "" } };
-        GM_xmlhttpRequest({ method: "POST", url: TS_URL_QUERY, headers: { "Content-Type": "application/json", "token": token }, data: JSON.stringify(payload), onload: function(res){ btn.innerText = originalText; btn.disabled=false; try{ const d = JSON.parse(res.responseText); if(d.code===200 && d.record && d.record.length>0){ const record = d.record[0]; const typeSel = document.getElementById('ts-type'); if(typeSel){ typeSel.value = record.workloadType; typeSel.dispatchEvent(new Event('change')); } const c = document.getElementById('ts-content'); if(c) c.value = record.workContent || ''; const h = document.getElementById('ts-hours'); if(h) h.value = record.workHour || 8; const r = document.getElementById('ts-reviewer'); if(r && record.inspectorId) r.value = record.inspectorId; if(record.workloadType=='1'){ const p1 = document.getElementById('ts-project-1'); if(p1) p1.value = record.projectCategory || ''; const st = document.getElementById('ts-stage'); if(st) st.value = record.workloadNpiNode || ''; const f = document.getElementById('ts-form'); if(f) f.value = record.productForm || ''; } else if(record.workloadType=='0'){ const p0 = document.getElementById('ts-project-0'); const name = resolveTsProjectName(record); if(p0) p0.value = name || ''; } else if(record.workloadType=='2'){ const p2 = document.getElementById('ts-project-2'); const name = resolveTsProjectName(record); if(p2) p2.value = name || ''; } } else alert('昨日未找到工时记录'); } catch(e){ alert('解析响应失败'); } } });
+        const btn = document.getElementById('ts-btn-copy-yesterday'); if(!btn) return; const originalText = btn.innerText; btn.innerText='查询中...'; btn.disabled=true;
+        const picker = document.getElementById('ts-copy-picker'); if (picker) { picker.style.display='none'; picker.innerHTML=''; }
+        const today = new Date(); let foundDate = null; let foundList = null;
+        function queryByDate(dateStr, done) {
+            const payload = { currPage: 1, pageSize: 50, dataForm: { workTimes: [`${dateStr} 00:00:00`, `${dateStr} 23:59:59`], creatorId: uid, workloadType: "", preResearchProjectId: "", commonProjectId: "", projectCategory: "", outerProjectCategory: "", businessDepartment: "", workloadNpiNode: "", productForm: "", workModuleId: "", workSubModuleId: "", workContent: "", workHour: "", remark: "", inspectorId: "", checkStatus: "", checkTimes: [], checkFeedback: "" } };
+            GM_xmlhttpRequest({ method: "POST", url: TS_URL_QUERY, headers: { "Content-Type": "application/json", "token": token }, data: JSON.stringify(payload), onload: function(res){ try{ const d = JSON.parse(res.responseText); done(d && d.code===200 ? (d.record||[]) : []); } catch(e){ done([]); } }, onerror: ()=>done([]) });
+        }
+        (async function(){
+            for(let i=1;i<=30;i++){
+                const dt = new Date(today); dt.setDate(dt.getDate()-i); const ds = dt.toISOString().split('T')[0];
+                const list = await new Promise(resolve => queryByDate(ds, resolve));
+                if (list && list.length>0) { foundDate = ds; foundList = list; break; }
+            }
+            btn.innerText = originalText; btn.disabled=false;
+            if (!foundList || foundList.length===0) { alert('最近未找到可参考记录'); return; }
+            const htmlItems = foundList.map(rec => {
+                const typeLabel = rec.workloadType == '1' ? '<span class="ts-tag ts-tag-dev">开发</span>' : (rec.workloadType == '0' ? '<span class="ts-tag ts-tag-pre">预研</span>' : '<span class="ts-tag ts-tag-com">Common</span>');
+                const name = resolveTsProjectName(rec);
+                const date = rec.workTime ? rec.workTime.split('T')[0] : foundDate;
+                return `<div class="inv-item" style="margin-bottom:8px;"><div style="flex:1"><div>${typeLabel} <b>${name}</b> <span style="color:#666">${date}</span></div><div style="font-size:12px;color:#aaa">${rec.workContent || ''}</div></div><div style="display:flex;align-items:center;gap:8px;"><div style="font-weight:bold">${rec.workHour || 0}h</div><button class="sub-btn ts-pick-apply">应用</button></div></div>`;
+            }).join('');
+            if (picker) {
+                picker.innerHTML = `<div style="font-weight:bold; margin-bottom:8px; color: var(--accent);">选择近期记录作为模板（${foundDate}）</div>${htmlItems}`;
+                picker.style.display = 'block';
+                Array.from(picker.querySelectorAll('.ts-pick-apply')).forEach((btnEl, idx) => {
+                    btnEl.onclick = () => {
+                        const rec = foundList[idx];
+                        const typeSel = document.getElementById('ts-type'); if(typeSel){ typeSel.value = String(rec.workloadType); typeSel.dispatchEvent(new Event('change')); }
+                        setTimeout(()=>{ if(rec.workloadType=='1'){ const p1 = document.getElementById('ts-project-1'); if(p1) p1.value = rec.projectCategory || ''; const st = document.getElementById('ts-stage'); if(st) st.value = rec.workloadNpiNode || ''; const f = document.getElementById('ts-form'); if(f) f.value = rec.productForm || ''; handleDevProjectChange(); } else if(rec.workloadType=='0'){ const p0 = document.getElementById('ts-project-0'); const nm = resolveTsProjectName(rec); if(p0) p0.value = nm || ''; } else if(rec.workloadType=='2'){ const p2 = document.getElementById('ts-project-2'); const nm2 = resolveTsProjectName(rec); if(p2) p2.value = nm2 || ''; } const c = document.getElementById('ts-content'); if(c) c.value = rec.workContent || ''; const h = document.getElementById('ts-hours'); if(h) h.value = rec.workHour || 8; const d = document.getElementById('ts-date'); if(d) d.value = new Date().toISOString().split('T')[0]; const r = document.getElementById('ts-reviewer'); if(r && rec.inspectorId) r.value = rec.inspectorId; }, 100);
+                        picker.style.display = 'none';
+                    };
+                });
+            }
+        })();
     }
     function submitWorkloadAction() {
         const data = {
