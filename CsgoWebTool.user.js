@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         工时统计助手 - CS:GO UI轮盘版 (V45.0)
 // @namespace    http://tampermonkey.net/
-// @version      45.0
+// @version      45.1
 // @description  优化工时系统查询往日记录逻辑，解决往日多条或在周一/请假的时候选择参考昨日填写，获取不了的问题
 // @match        *://*/*
 // @include      file:///*
@@ -22,7 +22,7 @@
 // ==/UserScript==
 
 (function() {
-    'use strict';
+    'use strict'; 
 
     console.log("🔥 [CS:GO] V45.0 启动 - Core 45.0，作者DJ");
 
