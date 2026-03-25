@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         工时统计助手 - CS:GO UI轮盘版 (V44.5)
+// @name         工时统计助手 - CS:GO UI轮盘版 (V45.0)
 // @namespace    http://tampermonkey.net/
-// @version      44.5
+// @version      44.6
 // @description  优化工时系统查询往日记录逻辑，解决往日多条或在周一/请假的时候选择参考昨日填写，获取不了的问题
 // @match        *://*/*
 // @include      file:///*
@@ -24,7 +24,7 @@
 (function() {
     'use strict';
 
-    console.log("🔥 [CS:GO] V44.5 启动 - Core 44.5，作者DJ");
+    console.log("🔥 [CS:GO] V45.0 启动 - Core 45.0，作者DJ");
 
     // ================= V41 核心配置 (绝对保留) =================
     const DOMAIN_BASE = "http://work.cqdev.top";
@@ -72,7 +72,27 @@
     const STORAGE_KEY_AUTH = 'tm_csgo_v42_auth';
     const STORAGE_KEY_SUBMIT_HISTORY = 'tm_csgo_v42_submit_hist';
     const KEY_MENU_ORDER = 'tm_csgo_v42_menu_order';
-    const KEY_THEME = 'tm_csgo_v42_theme';
+    const KEY_THEME = 'tm_csgo_theme';
+    const LEGACY_THEME_KEYS = ['tm_csgo_v42_theme'];
+    function getSavedTheme() {
+        let val = GM_getValue(KEY_THEME, null);
+        if (!val) {
+            for (let k of LEGACY_THEME_KEYS) {
+                const legacy = GM_getValue(k, null);
+                if (legacy) { val = legacy; GM_setValue(KEY_THEME, legacy); break; }
+            }
+        }
+        if (!val) {
+            try { val = localStorage.getItem('CSGO_THEME') || null; } catch(e) {}
+        }
+        if (!val) val = 'gold';
+        return val;
+    }
+    function saveTheme(name) {
+        GM_setValue(KEY_THEME, name);
+        LEGACY_THEME_KEYS.forEach(k => GM_setValue(k, name));
+        try { localStorage.setItem('CSGO_THEME', name); } catch(e) {}
+    }
 
     let SESSION_TOKEN = "";
     let SESSION_ID_8989 = "";
@@ -916,9 +936,9 @@ function calcOT(schedule, clockIn, clockOut) {
         .manual-btn:hover { color: var(--accent); border-color: var(--accent); background: #222; }
         #manual-modal { position: fixed; top: 10%; right: 10%; width: 600px; max-height: 80vh; background: var(--modalBg); border: 2px solid var(--accent); z-index: 2147483648; display: none; overflow-y: auto; color: var(--panelText); border-radius: 8px; backdrop-filter: blur(var(--modalBlur)); box-shadow: 0 0 50px rgba(0,0,0,0.8); cursor: default; }
         .manual-header { padding: 15px; background: var(--accentSoft); border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none; }
-        .manual-header h2 { margin: 0; color: var(--accent); font-size: 18px; }
+        .manual-header h2 { margin: 0; color: var(--panelText); font-size: 18px; }
         .manual-content { padding: 20px; font-size: 14px; line-height: 1.6; }
-        .manual-content h3 { color: #fff; border-bottom: 1px solid #555; padding-bottom: 5px; margin-top: 20px; }
+        .manual-content h3 { color: var(--panelText); border-bottom: 1px solid var(--cardBorder); padding-bottom: 5px; margin-top: 20px; }
         .manual-content ul { padding-left: 20px; }
         .manual-content li { margin-bottom: 8px; }
         .close-manual { color: #888; cursor: pointer; font-size: 24px; transition: 0.2s; }
@@ -958,7 +978,7 @@ function calcOT(schedule, clockIn, clockOut) {
                         </div>
                     </div>
                     <div id="left-controls" style="display:flex; flex-direction:column; gap:10px; align-items:center; margin-top: 24px;">
-                        <button id="btn-open-manual" class="manual-btn" style="margin-top:0;">📘 版本说明书 (V44.5)</button>
+                        <button id="btn-open-manual" class="manual-btn" style="margin-top:0;">📘 版本说明书 (45.0)</button>
                         <div id="theme-toolbar" style="display:flex; gap:8px; align-items:center; background: var(--cardBg); border: 1px solid var(--cardBorder); border-radius: 20px; padding: 6px 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
                             <span style="color:#888; font-size:12px;">🎨 主题</span>
                             <select id="theme-select" class="add-select" style="width:200px; height:28px; padding:4px 8px;">
@@ -991,7 +1011,7 @@ function calcOT(schedule, clockIn, clockOut) {
 
                 <div class="info-panel" id="panel-right" style="opacity:0; pointer-events:none;">
                     <div id="view-query" class="view-container hidden">
-                        <div class="panel-header"><div>📊 工作量统计</div><div style="font-size:12px;color:#666;">core 44.5，作者DJ</div></div>
+                        <div class="panel-header"><div>📊 工作量统计</div><div style="font-size:12px;color:#666;">core 45.0，作者DJ</div></div>
                         <div class="date-row" style="display:flex; gap:10px; margin-bottom:15px;">
                             <input type="date" id="cs-start" class="cs-input">
                             <input type="date" id="cs-end" class="cs-input">
@@ -1007,7 +1027,7 @@ function calcOT(schedule, clockIn, clockOut) {
                     </div>
 
                     <div id="view-add" class="view-container hidden">
-                        <div class="panel-header"><div>📝 填写工作量</div><div style="font-size:12px;color:#666;">core 44.5，作者DJ</div></div>
+                        <div class="panel-header"><div>📝 填写工作量</div><div style="font-size:12px;color:#666;">core 45.0，作者DJ</div></div>
                         <div class="add-form">
                             <div class="form-row"><div class="form-group" style="flex:1"><label class="form-label">开始日期</label><input type="date" id="add-start" class="add-input"></div><div class="form-group" style="flex:1"><label class="form-label">完成日期</label><input type="date" id="add-end" class="add-input"></div></div>
                             <div class="form-group proj-search-wrapper">
@@ -1036,7 +1056,7 @@ function calcOT(schedule, clockIn, clockOut) {
                     </div>
 
                     <div id="view-salary" class="view-container hidden">
-                        <div class="panel-header"><div>💰 薪资/考勤查询 (Mobiwire)</div><div style="font-size:12px;color:#666;">core 44.5，作者DJ</div></div>
+                        <div class="panel-header"><div>💰 薪资/考勤查询 (Mobiwire)</div><div style="font-size:12px;color:#666;">core 45.0，作者DJ</div></div>
                         <div class="tab-bar">
                             <button id="tab-salary" class="tab-btn active">查询薪资</button>
                             <button id="tab-att" class="tab-btn">查询考勤</button>
@@ -1076,7 +1096,7 @@ function calcOT(schedule, clockIn, clockOut) {
                     </div>
 
                     <div id="view-timesheet" class="view-container hidden">
-                        <div class="panel-header"><div>⏱️ 工时系统</div><div style="font-size:12px;color:#666;">core 44.5，作者DJ</div></div>
+                        <div class="panel-header"><div>⏱️ 工时系统</div><div style="font-size:12px;color:#666;">core 45.0，作者DJ</div></div>
                         <div class="tab-bar">
                             <button id="ts-tab-fill" class="tab-btn active">填写</button>
                             <button id="ts-tab-query" class="tab-btn">查询/管理</button>
@@ -1129,7 +1149,7 @@ function calcOT(schedule, clockIn, clockOut) {
 
 
                     <div id="view-settings" class="view-container hidden">
-                        <div class="panel-header"><div>⚙️ 账号设置</div><div style="font-size:12px;color:#666;">core 44.5，作者DJ</div></div>
+                        <div class="panel-header"><div>⚙️ 账号设置</div><div style="font-size:12px;color:#666;">core 45.0，作者DJ</div></div>
                         <div class="auth-form">
                             <div class="auth-section">
                                 <div class="auth-section-title">工作量系统 (Sagereal)</div>
@@ -1151,7 +1171,7 @@ function calcOT(schedule, clockIn, clockOut) {
                     </div>
 
                     <div id="view-history" class="view-container hidden">
-                        <div class="panel-header"><div>📜 填报历史</div><div style="font-size:12px;color:#666;">core 44.5，作者DJ</div></div>
+                        <div class="panel-header"><div>📜 填报历史</div><div style="font-size:12px;color:#666;">core 45.0，作者DJ</div></div>
                         <div class="hist-summary" style="display:flex; justify-content:space-around; margin-bottom:15px; background:#222; padding:10px; border-radius:4px;">
                             <div class="hist-sum-item"><div>本月已填</div><div class="hist-sum-val" id="hist-month-val" style="color: var(--accent); font-weight:bold;">0h</div></div>
                             <div style="width:1px; background:#444;"></div>
@@ -1164,8 +1184,35 @@ function calcOT(schedule, clockIn, clockOut) {
             </div>
 
             <div id="manual-modal">
-                <div class="manual-header" id="manual-header"><h2>📘 DJWebTool操作手册 V44.5</h2><div class="close-manual" id="close-manual">×</div></div>
+                <div class="manual-header" id="manual-header"><h2>📘 DJWebTool操作手册 V45.0</h2><div class="close-manual" id="close-manual">×</div></div>
                 <div class="manual-content">
+                    <h3>🐂 V45.0 版本更新</h3>
+                    <ul>
+                        <li>
+                        <strong> 开发jira切单时自动触发填写工作量</strong>
+                        <li>
+                            开发jira切单到resolved时自动触发填写工作量，功能支持开关。
+                        </li>
+                        </li>
+                        <li>
+                        <strong> 开发定时喝水提醒</strong>
+                        <li>
+                            开发定时提醒喝水，默认每小时提醒一次，功能支持开关。
+                        </li>
+                        </li>
+                         <li>
+                        <strong> 主题色修复</strong>
+                        <li>
+                            主题持久化做成“跨网页、跨脚本版本都不丢”的方案
+                        </li>
+                        </li>
+                         <li>
+                        <strong> 优化薪资/考勤查询</strong>
+                        <li>
+                            薪资考勤查询二级轮盘菜单支持季度/本月选择
+                        </li>
+                        </li>
+                    </ul>
                     <h3>❤️ V44.5 版本更新</h3>
                     <ul>
                         <li>
@@ -1345,17 +1392,17 @@ function calcOT(schedule, clockIn, clockOut) {
         `;
 
         const themeSelect = overlay.querySelector('#theme-select');
-        const savedTheme = GM_getValue(KEY_THEME, 'gold');
+        const savedTheme = getSavedTheme();
         const themesAll = ['gold','blue','green','purple','red','cream','mint','teal','olive','forest','slate','cyan','amber','neutral','greige','emerald','navy','mauve','seasalt','graphite','dawn'];
         themesAll.forEach(t=>overlay.classList.remove('theme-'+t));
-        overlay.classList.add('theme-' + savedTheme);
+        overlay.classList.add('theme-' + (themesAll.includes(savedTheme) ? savedTheme : 'gold'));
         if (themeSelect) {
-            themeSelect.value = savedTheme;
+            themeSelect.value = (themesAll.includes(savedTheme) ? savedTheme : 'gold');
             themeSelect.addEventListener('change', function(){
                 const name = themeSelect.value;
                 themesAll.forEach(t=>overlay.classList.remove('theme-'+t));
                 overlay.classList.add('theme-' + name);
-                GM_setValue(KEY_THEME, name);
+                saveTheme(name);
             });
         }
         document.body.appendChild(overlay);
@@ -1488,6 +1535,7 @@ function calcOT(schedule, clockIn, clockOut) {
             tabAtt.classList.remove('active');
             panelSalary.style.display = 'block';
             panelAtt.style.display = 'none';
+            try { if (window && window.__csgo_setWheelMode) window.__csgo_setWheelMode('SALARY'); } catch(e){}
         } else {
             tabAtt.classList.add('active');
             tabSalary.classList.remove('active');
@@ -1499,6 +1547,7 @@ function calcOT(schedule, clockIn, clockOut) {
             const attS = document.getElementById('att-start');
             const attE = document.getElementById('att-end');
             if (attS && attE) { attS.value = s; attE.value = e; }
+            try { if (window && window.__csgo_setWheelMode) window.__csgo_setWheelMode('ATTENDANCE'); } catch(e){}
         }
     }
     // ================= 轮盘逻辑 (V42.6 恢复二级菜单) =================
@@ -1542,8 +1591,28 @@ function calcOT(schedule, clockIn, clockOut) {
         },
         'SETTINGS': { sectors: [{ id: 'back', label: '返回', desc: 'Back', isBack: true }], hub: 'BACK', count: 1 },
         'HISTORY': { sectors: [{ id: 'back', label: '返回', desc: 'Back', isBack: true }], hub: 'BACK', count: 1 },
-        'SALARY': { sectors: [{ id: 'back', label: '返回', desc: 'Back', isBack: true }], hub: 'BACK', count: 1 },
-        'ATTENDANCE': { sectors: [{ id: 'back', label: '返回', desc: 'Back', isBack: true }], hub: 'BACK', count: 1 },
+        'SALARY': {
+            sectors: [
+                { id: 'q1', label: 'Q1', desc: 'Jan-Mar' },
+                { id: 'q2', label: 'Q2', desc: 'Apr-Jun' },
+                { id: 'q3', label: 'Q3', desc: 'Jul-Sep' },
+                { id: 'q4', label: 'Q4', desc: 'Oct-Dec' },
+                { id: 'curr', label: '本月', desc: 'Current' }
+            ],
+            hub: 'BACK',
+            count: 5
+        },
+        'ATTENDANCE': {
+            sectors: [
+                { id: 'q1', label: 'Q1', desc: 'Jan-Mar' },
+                { id: 'q2', label: 'Q2', desc: 'Apr-Jun' },
+                { id: 'q3', label: 'Q3', desc: 'Jul-Sep' },
+                { id: 'q4', label: 'Q4', desc: 'Oct-Dec' },
+                { id: 'curr', label: '本月', desc: 'Current' }
+            ],
+            hub: 'BACK',
+            count: 5
+        },
         'TIMESHEET': { sectors: [{ id: 'back', label: '返回', desc: 'Back', isBack: true }], hub: 'BACK', count: 1 }
     };
 
@@ -1623,10 +1692,29 @@ function calcOT(schedule, clockIn, clockOut) {
                 if(currentMode === 'ADD') { document.getElementById('view-add').classList.remove('hidden'); fetchProjects(); }
                 if(currentMode === 'SETTINGS') { document.getElementById('view-settings').classList.remove('hidden'); loadSettings(); }
                 if(currentMode === 'HISTORY') { document.getElementById('view-history').classList.remove('hidden'); renderHistory(); }
-                if(currentMode === 'SALARY') document.getElementById('view-salary').classList.remove('hidden');
-                if(currentMode === 'ATTENDANCE') document.getElementById('view-attendance').classList.remove('hidden');
+                if(currentMode === 'SALARY' || currentMode === 'ATTENDANCE') {
+                    const view = document.getElementById('view-salary');
+                    if (view) view.classList.remove('hidden');
+                    const tabSalary = document.getElementById('tab-salary');
+                    const tabAtt = document.getElementById('tab-att');
+                    const panelSalary = document.getElementById('mw-salary-panel');
+                    const panelAtt = document.getElementById('mw-att-panel');
+                    if (tabSalary && tabAtt && panelSalary && panelAtt) {
+                        if (currentMode === 'SALARY') {
+                            tabSalary.classList.add('active'); tabAtt.classList.remove('active');
+                            panelSalary.style.display = 'block'; panelAtt.style.display = 'none';
+                        } else {
+                            tabAtt.classList.add('active'); tabSalary.classList.remove('active');
+                            panelAtt.style.display = 'block'; panelSalary.style.display = 'none';
+                        }
+                    }
+                }
                 if(currentMode === 'TIMESHEET') { document.getElementById('view-timesheet').classList.remove('hidden'); initTimesheet(); }
             }
+        }
+
+        if (typeof window !== 'undefined') {
+            window.__csgo_setWheelMode = (m) => { renderWheel(m); };
         }
 
         renderWheel('MENU');
@@ -1778,6 +1866,10 @@ function calcOT(schedule, clockIn, clockOut) {
                 else if (activeSector === 'jira-ex') GM_openInTab(URL_LOGIN_EXT, { active: true });
             } else if (currentMode === 'QUERY') {
                 setDates(activeSector);
+            } else if (currentMode === 'SALARY') {
+                setSalaryQuarter(activeSector);
+            } else if (currentMode === 'ATTENDANCE') {
+                setAttendanceQuarter(activeSector);
             } else if (currentMode === 'ADD') {
                 if (activeSector === 'submit') submitWorkloadAction();
                 else if (activeSector === 'reset') {
@@ -1886,6 +1978,57 @@ function calcOT(schedule, clockIn, clockOut) {
         }
         document.getElementById('cs-start').value = s;
         document.getElementById('cs-end').value = e;
+    }
+
+    // 薪资季度快捷选择（依据面板年份）
+    function setSalaryQuarter(type) {
+        const yEl = document.getElementById('mw-year');
+        const y = (yEl && parseInt(yEl.value)) || new Date().getFullYear();
+        const startSel = document.getElementById('mw-start');
+        const endSel = document.getElementById('mw-end');
+        const ymS = document.getElementById('mw-ym-start');
+        const ymE = document.getElementById('mw-ym-end');
+        if (!startSel || !endSel) return;
+        if (ymS) ymS.value = '';
+        if (ymE) ymE.value = '';
+        if (type === 'q1') { startSel.value = '1'; endSel.value = '3'; }
+        else if (type === 'q2') { startSel.value = '4'; endSel.value = '6'; }
+        else if (type === 'q3') { startSel.value = '7'; endSel.value = '9'; }
+        else if (type === 'q4') { startSel.value = '10'; endSel.value = '12'; }
+        else if (type === 'curr') {
+            const now = new Date();
+            const yearNow = now.getFullYear();
+            const monthNow = (now.getMonth() + 1).toString();
+            if (yEl) yEl.value = String(yearNow);
+            startSel.value = monthNow;
+            endSel.value = monthNow;
+        }
+    }
+
+    // 考勤季度快捷选择（依据面板年份）
+    function setAttendanceQuarter(type) {
+        const yEl = document.getElementById('att-year');
+        const y = (yEl && parseInt(yEl.value)) || new Date().getFullYear();
+        const sEl = document.getElementById('att-start');
+        const eEl = document.getElementById('att-end');
+        if (!sEl || !eEl) return;
+        const setRange = (m1, d1, m2, d2) => {
+            sEl.value = `${y}-${String(m1).padStart(2,'0')}-${String(d1).padStart(2,'0')}`;
+            eEl.value = `${y}-${String(m2).padStart(2,'0')}-${String(d2).padStart(2,'0')}`;
+        };
+        if (type === 'q1') setRange(1,1,3,31);
+        else if (type === 'q2') setRange(4,1,6,30);
+        else if (type === 'q3') setRange(7,1,9,30);
+        else if (type === 'q4') setRange(10,1,12,31);
+        else if (type === 'curr') {
+            const now = new Date();
+            const yNow = now.getFullYear();
+            const mNow = now.getMonth() + 1;
+            const lastDay = new Date(yNow, mNow, 0).getDate();
+            if (yEl) yEl.value = String(yNow);
+            sEl.value = `${yNow}-${String(mNow).padStart(2,'0')}-01`;
+            eEl.value = `${yNow}-${String(mNow).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+        }
     }
 
     // ================= 功能函数 =================
