@@ -924,7 +924,8 @@ function calcOT(schedule, clockIn, clockOut) {
         .grade-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; background: var(--cardBg); padding: 15px; border-radius: 6px; }
         .grade-item { background: var(--cardItemBg); border: 1px solid var(--cardBorder); padding: 10px; text-align: center; border-radius: 4px; }
         .grade-item.high-tier { border-color: var(--accent); background: var(--accentSoft); }
-        .g-val { font-size: 20px; font-weight: bold; color: #eee; }
+        .g-val { font-size: 20px; font-weight: bold; color: var(--panelText); }
+        .g-label { color: var(--panelText); opacity: 0.9; }
         .high-tier .g-val { color: var(--accent); }
         .inventory-list { display: flex; flex-direction: column; gap: 10px; overflow-y:auto; max-height:450px; }
         .inv-item { background: var(--cardItemBg); border: 1px solid var(--cardBorder); padding: 12px; border-radius: 4px; display: flex; align-items: center; transition: 0.2s; }
@@ -1196,18 +1197,6 @@ function calcOT(schedule, clockIn, clockOut) {
                     <h3>🐂 V45.0 版本更新</h3>
                     <ul>
                         <li>
-                        <strong> 开发jira切单时自动触发填写工作量</strong>
-                        <li>
-                            开发jira切单到resolved时自动触发填写工作量，功能支持开关。
-                        </li>
-                        </li>
-                        <li>
-                        <strong> 开发定时喝水提醒</strong>
-                        <li>
-                            开发定时提醒喝水，默认每小时提醒一次，功能支持开关。
-                        </li>
-                        </li>
-                         <li>
                         <strong> 主题色修复</strong>
                         <li>
                             主题持久化做成“跨网页、跨脚本版本都不丢”的方案
