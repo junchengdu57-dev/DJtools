@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         工时统计助手 - CS:GO UI轮盘版 (V45.0)
+// @name         工时统计助手 - CS:GO UI轮盘版 (V45.1)
 // @namespace    http://tampermonkey.net/
 // @version      45.1
-// @description  优化工时系统查询往日记录逻辑，解决往日多条或在周一/请假的时候选择参考昨日填写，获取不了的问题
+// @description  修复工时填写common类型时，业务部门不能选择问题
 // @match        *://*/*
 // @include      file:///*
 // @updateURL    https://raw.githubusercontent.com/junchengdu57-dev/DJtools/main/CsgoWebTool.user.js
@@ -24,7 +24,7 @@
 (function() {
     'use strict'; 
 
-    console.log("🔥 [CS:GO] V45.0 启动 - Core 45.0，作者DJ");
+    console.log("🔥 [CS:GO] V45.1 启动 - Core 45.1，作者DJ");
 
     // ================= V41 核心配置 (绝对保留) =================
     const DOMAIN_BASE = "http://work.cqdev.top";
@@ -986,7 +986,7 @@ function calcOT(schedule, clockIn, clockOut) {
                         </div>
                     </div>
                     <div id="left-controls" style="display:flex; flex-direction:column; gap:10px; align-items:center; margin-top: 24px;">
-                        <button id="btn-open-manual" class="manual-btn" style="margin-top:0;">📘 版本说明书 (45.0)</button>
+                        <button id="btn-open-manual" class="manual-btn" style="margin-top:0;">📘 版本说明书 (45.1)</button>
                         <div id="theme-toolbar" style="display:flex; gap:8px; align-items:center; background: var(--cardBg); border: 1px solid var(--cardBorder); border-radius: 20px; padding: 6px 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
                             <span style="color:#888; font-size:12px;">🎨 主题</span>
                             <select id="theme-select" class="add-select" style="width:200px; height:28px; padding:4px 8px;">
@@ -1019,7 +1019,7 @@ function calcOT(schedule, clockIn, clockOut) {
 
                 <div class="info-panel" id="panel-right" style="opacity:0; pointer-events:none;">
                     <div id="view-query" class="view-container hidden">
-                        <div class="panel-header"><div>📊 工作量统计</div><div style="font-size:12px;color:#666;">core 45.0，作者DJ</div></div>
+                        <div class="panel-header"><div>📊 工作量统计</div><div style="font-size:12px;color:#666;">core 45.1，作者DJ</div></div>
                         <div class="date-row" style="display:flex; gap:10px; margin-bottom:15px;">
                             <input type="date" id="cs-start" class="cs-input">
                             <input type="date" id="cs-end" class="cs-input">
@@ -1035,7 +1035,7 @@ function calcOT(schedule, clockIn, clockOut) {
                     </div>
 
                     <div id="view-add" class="view-container hidden">
-                        <div class="panel-header"><div>📝 填写工作量</div><div style="font-size:12px;color:#666;">core 45.0，作者DJ</div></div>
+                        <div class="panel-header"><div>📝 填写工作量</div><div style="font-size:12px;color:#666;">core 45.1，作者DJ</div></div>
                         <div class="add-form">
                             <div class="form-row"><div class="form-group" style="flex:1"><label class="form-label">开始日期</label><input type="date" id="add-start" class="add-input"></div><div class="form-group" style="flex:1"><label class="form-label">完成日期</label><input type="date" id="add-end" class="add-input"></div></div>
                             <div class="form-group proj-search-wrapper">
@@ -1064,7 +1064,7 @@ function calcOT(schedule, clockIn, clockOut) {
                     </div>
 
                     <div id="view-salary" class="view-container hidden">
-                        <div class="panel-header"><div>💰 薪资/考勤查询 (Mobiwire)</div><div style="font-size:12px;color:#666;">core 45.0，作者DJ</div></div>
+                        <div class="panel-header"><div>💰 薪资/考勤查询 (Mobiwire)</div><div style="font-size:12px;color:#666;">core 45.1，作者DJ</div></div>
                         <div class="tab-bar">
                             <button id="tab-salary" class="tab-btn active">查询薪资</button>
                             <button id="tab-att" class="tab-btn">查询考勤</button>
@@ -1104,7 +1104,7 @@ function calcOT(schedule, clockIn, clockOut) {
                     </div>
 
                     <div id="view-timesheet" class="view-container hidden">
-                        <div class="panel-header"><div>⏱️ 工时系统</div><div style="font-size:12px;color:#666;">core 45.0，作者DJ</div></div>
+                        <div class="panel-header"><div>⏱️ 工时系统</div><div style="font-size:12px;color:#666;">core 45.1，作者DJ</div></div>
                         <div class="tab-bar">
                             <button id="ts-tab-fill" class="tab-btn active">填写</button>
                             <button id="ts-tab-query" class="tab-btn">查询/管理</button>
@@ -1157,7 +1157,7 @@ function calcOT(schedule, clockIn, clockOut) {
 
 
                     <div id="view-settings" class="view-container hidden">
-                        <div class="panel-header"><div>⚙️ 账号设置</div><div style="font-size:12px;color:#666;">core 45.0，作者DJ</div></div>
+                        <div class="panel-header"><div>⚙️ 账号设置</div><div style="font-size:12px;color:#666;">core 45.1，作者DJ</div></div>
                         <div class="auth-form">
                             <div class="auth-section">
                                 <div class="auth-section-title">工作量系统 (Sagereal)</div>
@@ -1179,7 +1179,7 @@ function calcOT(schedule, clockIn, clockOut) {
                     </div>
 
                     <div id="view-history" class="view-container hidden">
-                        <div class="panel-header"><div>📜 填报历史</div><div style="font-size:12px;color:#666;">core 45.0，作者DJ</div></div>
+                        <div class="panel-header"><div>📜 填报历史</div><div style="font-size:12px;color:#666;">core 45.1，作者DJ</div></div>
                         <div class="hist-summary" style="display:flex; justify-content:space-around; margin-bottom:15px; background:#222; padding:10px; border-radius:4px;">
                             <div class="hist-sum-item"><div>本月已填</div><div class="hist-sum-val" id="hist-month-val" style="color: var(--accent); font-weight:bold;">0h</div></div>
                             <div style="width:1px; background:#444;"></div>
@@ -1192,8 +1192,17 @@ function calcOT(schedule, clockIn, clockOut) {
             </div>
 
             <div id="manual-modal">
-                <div class="manual-header" id="manual-header"><h2>📘 DJWebTool操作手册 V45.0</h2><div class="close-manual" id="close-manual">×</div></div>
+                <div class="manual-header" id="manual-header"><h2>📘 DJWebTool操作手册 V45.1</h2><div class="close-manual" id="close-manual">×</div></div>
                 <div class="manual-content">
+                    <h3>😀 V45.1 版本更新</h3>
+                    <ul>
+                        <li>
+                        <strong> 工时系统修复</strong>
+                        <li>
+                            工时系统填写common类型时，业务部门不能选择问题
+                        </li>
+                        </li>
+                    </ul>
                     <h3>🐂 V45.0 版本更新</h3>
                     <ul>
                         <li>
@@ -2226,7 +2235,7 @@ function calcOT(schedule, clockIn, clockOut) {
 
     let TS_TOKEN = "";
     let TS_UID = "";
-    const TS_DATA = { devProjects: [], preProjects: [], comProjects: [], lastQueryResult: [], editingId: null };
+    const TS_DATA = { devProjects: [], preProjects: [], comProjects: [], lastQueryResult: [], editingId: null, lastCommonBusinessDepartment: "11" };
 
     function initTimesheet() {
         TS_TOKEN = "";
@@ -2249,6 +2258,35 @@ function calcOT(schedule, clockIn, clockOut) {
         const p0 = document.getElementById('ts-project-0');
         const p1 = document.getElementById('ts-project-1');
         const p2 = document.getElementById('ts-project-2');
+        const COMMON_DEPT_LIST = [
+            { id: "10", label: "麦度(10)" },
+            { id: "13", label: "法国(13)" },
+            { id: "14", label: "移动终端(14)" },
+            { id: "15", label: "传音(15)" },
+            { id: "16", label: "业务拓展(16)" },
+            { id: "11", label: "萨瑞(11)" },
+            { id: "12", label: "Rotor(12)" },
+            { id: "20", label: "麦博(20)" },
+        ];
+        function syncTsDeptForType() {
+            const d = document.getElementById('ts-dept');
+            if (!d || !typeSel) return;
+            const t = typeSel.value;
+            if (t === '2') {
+                d.disabled = false;
+                const prev = TS_DATA.lastCommonBusinessDepartment || d.value || "11";
+                d.innerHTML = COMMON_DEPT_LIST.map(it => `<option value="${it.id}">${it.label}</option>`).join('');
+                const prevStr = String(prev);
+                const nextVal = COMMON_DEPT_LIST.some(it => it.id === prevStr) ? prevStr : "11";
+                if (COMMON_DEPT_LIST.some(it => it.id === nextVal)) d.value = nextVal;
+                TS_DATA.lastCommonBusinessDepartment = d.value;
+            } else {
+                d.disabled = true;
+                d.innerHTML = '<option>自动填充</option>';
+                // dev：保留原逻辑：根据项目自动匹配业务部门
+                if (t === '1') handleDevProjectChange();
+            }
+        }
         function rerenderProjectInputs() {
             const t = typeSel.value;
             if (p0 && p1 && p2) {
@@ -2257,7 +2295,18 @@ function calcOT(schedule, clockIn, clockOut) {
                 p2.style.display = t === '2' ? '' : 'none';
             }
         }
-        if (typeSel) { typeSel.onchange = rerenderProjectInputs; rerenderProjectInputs(); }
+        if (typeSel) {
+            typeSel.onchange = () => { rerenderProjectInputs(); syncTsDeptForType(); };
+            rerenderProjectInputs();
+            syncTsDeptForType();
+        }
+        const deptSel = document.getElementById('ts-dept');
+        if (deptSel) {
+            deptSel.onchange = () => {
+                // 只在 common 模式下记录选择，避免污染预研/开发逻辑
+                if (typeSel && typeSel.value === '2') TS_DATA.lastCommonBusinessDepartment = deptSel.value;
+            };
+        }
         const devInput = document.getElementById('ts-project-1');
         if (devInput) devInput.addEventListener('change', handleDevProjectChange);
         const btnSubmit = document.getElementById('ts-btn-submit');
@@ -2365,7 +2414,7 @@ function calcOT(schedule, clockIn, clockOut) {
 
     function loadTsRecordToForm(record, resolvedProjectName) {
         const tabFill = document.getElementById('ts-tab-fill'); if (tabFill) tabFill.click(); TS_DATA.editingId = record.workloadRecordId; const tip = document.getElementById('ts-edit-tip'); const idEl = document.getElementById('ts-edit-id'); if (tip) tip.style.display='block'; if (idEl) idEl.innerText = record.workloadRecordId; const btn = document.getElementById('ts-btn-submit'); if (btn) btn.innerText = '确认修改'; const typeSel = document.getElementById('ts-type'); if (typeSel){ typeSel.value = String(record.workloadType); typeSel.dispatchEvent(new Event('change')); }
-        setTimeout(()=>{ if(record.workloadType == '1') { const p1 = document.getElementById('ts-project-1'); if(p1) p1.value = record.projectCategory; } else if(record.workloadType == '0'){ const p0 = document.getElementById('ts-project-0'); if(p0) p0.value = resolvedProjectName; } else if(record.workloadType == '2'){ const p2 = document.getElementById('ts-project-2'); if(p2) p2.value = resolvedProjectName; } const c = document.getElementById('ts-content'); if(c) c.value = record.workContent; const h = document.getElementById('ts-hours'); if(h) h.value = record.workHour; const d = document.getElementById('ts-date'); if(d) d.value = record.workTime.split('T')[0]; const r = document.getElementById('ts-reviewer'); if(r && record.inspectorId) r.value = record.inspectorId; if(record.workloadType == '1'){ const st = document.getElementById('ts-stage'); if(st) st.value = record.workloadNpiNode; const f = document.getElementById('ts-form'); if(f) f.value = record.productForm; handleDevProjectChange(); } }, 100);
+        setTimeout(()=>{ if(record.workloadType == '1') { const p1 = document.getElementById('ts-project-1'); if(p1) p1.value = record.projectCategory; } else if(record.workloadType == '0'){ const p0 = document.getElementById('ts-project-0'); if(p0) p0.value = resolvedProjectName; } else if(record.workloadType == '2'){ const p2 = document.getElementById('ts-project-2'); if(p2) p2.value = resolvedProjectName; } const c = document.getElementById('ts-content'); if(c) c.value = record.workContent; const h = document.getElementById('ts-hours'); if(h) h.value = record.workHour; const d = document.getElementById('ts-date'); if(d) d.value = record.workTime.split('T')[0]; const r = document.getElementById('ts-reviewer'); if(r && record.inspectorId) r.value = record.inspectorId; if(record.workloadType == '2' && record.businessDepartment){ const dept = document.getElementById('ts-dept'); if(dept){ const deptVal = String(record.businessDepartment); const exists = Array.from(dept.options).some(o => String(o.value) === deptVal); if(!exists){ dept.innerHTML += `<option value="${deptVal}">${deptVal}(自动匹配)</option>`; } dept.value = deptVal; TS_DATA.lastCommonBusinessDepartment = deptVal; } } if(record.workloadType == '1'){ const st = document.getElementById('ts-stage'); if(st) st.value = record.workloadNpiNode; const f = document.getElementById('ts-form'); if(f) f.value = record.productForm; handleDevProjectChange(); } }, 100);
     }
 
     function resetTsFormToCreate() { TS_DATA.editingId = null; const tip = document.getElementById('ts-edit-tip'); if(tip) tip.style.display='none'; const btn = document.getElementById('ts-btn-submit'); if(btn) btn.innerText='提交保存'; const c = document.getElementById('ts-content'); if(c) c.value=''; }
