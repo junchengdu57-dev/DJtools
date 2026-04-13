@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         工时统计助手 - CS:GO UI轮盘版 (V45.1)
+// @name         工时统计助手 - CS:GO UI轮盘版 (V45.2)
 // @namespace    http://tampermonkey.net/
-// @version      45.1
+// @version      45.2
 // @description  修复工时填写common类型时，业务部门不能选择问题
 // @match        *://*/*
 // @include      file:///*
@@ -24,7 +24,7 @@
 (function() {
     'use strict'; 
 
-    console.log("🔥 [CS:GO] V45.1 启动 - Core 45.1，作者DJ");
+    console.log("🔥 [CS:GO] V45.2 启动 - Core 45.2，作者DJ");
 
     // ================= V41 核心配置 (绝对保留) =================
     const DOMAIN_BASE = "http://work.cqdev.top";
@@ -33,12 +33,12 @@
     const KEY_SR_HOST = 'tm_csgo_v43_sr_host';
     let CURRENT_SR_HOST = GM_getValue(KEY_SR_HOST, SAGEREAL_HOSTS[0]);
     function srEndpoints() {
-        const base = `${CURRENT_SR_HOST}/CqSagereal/`;
+        const base = `${CURRENT_SR_HOST}/`;
         return {
             base,
-            apiData: `${CURRENT_SR_HOST}/CqSagereal/controller/workLoad`,
-            pageAdd: `${CURRENT_SR_HOST}/CqSagereal/page/performance_workload_add`,
-            referer: `${CURRENT_SR_HOST}/CqSagereal/page/main`,
+            apiData: `${CURRENT_SR_HOST}/controller/workLoad`,
+            pageAdd: `${CURRENT_SR_HOST}/page/performance_workload_add`,
+            referer: `${CURRENT_SR_HOST}/page/main`,
             origin: base
         };
     }
@@ -157,7 +157,7 @@
             await new Promise((done) => {
                 GM_xmlhttpRequest({
                     method: "GET",
-                    url: `${host}/CqSagereal/page/main`,
+                    url: `${host}/page/main`,
                     headers: { "Accept": "text/html" },
                     withCredentials: true,
                     onload: function(res) {
@@ -192,7 +192,7 @@
     function openLoginSelection() {
         return new Promise((resolve) => {
             const choice = confirm("检测到未登录工作量系统。\n是否打开 172.16.1.77 登录界面？\n选择‘取消’则打开 work.cqdev.top");
-            const url = choice ? "http://172.16.1.77:8989/CqSagereal/page/main" : "http://work.cqdev.top:8989/CqSagereal/page/main";
+            const url = choice ? "http://172.16.1.77:8989/page/main" : "http://work.cqdev.top:8989/page/main";
             GM_openInTab(url, { active: true });
             SR_LOGIN_PROMPTED = true;
             SR_LOGIN_PROMPTED_TS = Date.now();
@@ -986,7 +986,7 @@ function calcOT(schedule, clockIn, clockOut) {
                         </div>
                     </div>
                     <div id="left-controls" style="display:flex; flex-direction:column; gap:10px; align-items:center; margin-top: 24px;">
-                        <button id="btn-open-manual" class="manual-btn" style="margin-top:0;">📘 版本说明书 (45.1)</button>
+                        <button id="btn-open-manual" class="manual-btn" style="margin-top:0;">📘 版本说明书 (45.2)</button>
                         <div id="theme-toolbar" style="display:flex; gap:8px; align-items:center; background: var(--cardBg); border: 1px solid var(--cardBorder); border-radius: 20px; padding: 6px 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
                             <span style="color:#888; font-size:12px;">🎨 主题</span>
                             <select id="theme-select" class="add-select" style="width:200px; height:28px; padding:4px 8px;">
@@ -1019,7 +1019,7 @@ function calcOT(schedule, clockIn, clockOut) {
 
                 <div class="info-panel" id="panel-right" style="opacity:0; pointer-events:none;">
                     <div id="view-query" class="view-container hidden">
-                        <div class="panel-header"><div>📊 工作量统计</div><div style="font-size:12px;color:#666;">core 45.1，作者DJ</div></div>
+                        <div class="panel-header"><div>📊 工作量统计</div><div style="font-size:12px;color:#666;">core 45.2，作者DJ</div></div>
                         <div class="date-row" style="display:flex; gap:10px; margin-bottom:15px;">
                             <input type="date" id="cs-start" class="cs-input">
                             <input type="date" id="cs-end" class="cs-input">
@@ -1035,7 +1035,7 @@ function calcOT(schedule, clockIn, clockOut) {
                     </div>
 
                     <div id="view-add" class="view-container hidden">
-                        <div class="panel-header"><div>📝 填写工作量</div><div style="font-size:12px;color:#666;">core 45.1，作者DJ</div></div>
+                        <div class="panel-header"><div>📝 填写工作量</div><div style="font-size:12px;color:#666;">core 45.2，作者DJ</div></div>
                         <div class="add-form">
                             <div class="form-row"><div class="form-group" style="flex:1"><label class="form-label">开始日期</label><input type="date" id="add-start" class="add-input"></div><div class="form-group" style="flex:1"><label class="form-label">完成日期</label><input type="date" id="add-end" class="add-input"></div></div>
                             <div class="form-group proj-search-wrapper">
@@ -1064,7 +1064,7 @@ function calcOT(schedule, clockIn, clockOut) {
                     </div>
 
                     <div id="view-salary" class="view-container hidden">
-                        <div class="panel-header"><div>💰 薪资/考勤查询 (Mobiwire)</div><div style="font-size:12px;color:#666;">core 45.1，作者DJ</div></div>
+                        <div class="panel-header"><div>💰 薪资/考勤查询 (Mobiwire)</div><div style="font-size:12px;color:#666;">core 45.2，作者DJ</div></div>
                         <div class="tab-bar">
                             <button id="tab-salary" class="tab-btn active">查询薪资</button>
                             <button id="tab-att" class="tab-btn">查询考勤</button>
@@ -1104,7 +1104,7 @@ function calcOT(schedule, clockIn, clockOut) {
                     </div>
 
                     <div id="view-timesheet" class="view-container hidden">
-                        <div class="panel-header"><div>⏱️ 工时系统</div><div style="font-size:12px;color:#666;">core 45.1，作者DJ</div></div>
+                        <div class="panel-header"><div>⏱️ 工时系统</div><div style="font-size:12px;color:#666;">core 45.2，作者DJ</div></div>
                         <div class="tab-bar">
                             <button id="ts-tab-fill" class="tab-btn active">填写</button>
                             <button id="ts-tab-query" class="tab-btn">查询/管理</button>
@@ -1157,7 +1157,7 @@ function calcOT(schedule, clockIn, clockOut) {
 
 
                     <div id="view-settings" class="view-container hidden">
-                        <div class="panel-header"><div>⚙️ 账号设置</div><div style="font-size:12px;color:#666;">core 45.1，作者DJ</div></div>
+                        <div class="panel-header"><div>⚙️ 账号设置</div><div style="font-size:12px;color:#666;">core 45.2，作者DJ</div></div>
                         <div class="auth-form">
                             <div class="auth-section">
                                 <div class="auth-section-title">工作量系统 (Sagereal)</div>
@@ -1179,7 +1179,7 @@ function calcOT(schedule, clockIn, clockOut) {
                     </div>
 
                     <div id="view-history" class="view-container hidden">
-                        <div class="panel-header"><div>📜 填报历史</div><div style="font-size:12px;color:#666;">core 45.1，作者DJ</div></div>
+                        <div class="panel-header"><div>📜 填报历史</div><div style="font-size:12px;color:#666;">core 45.2作者DJ</div></div>
                         <div class="hist-summary" style="display:flex; justify-content:space-around; margin-bottom:15px; background:#222; padding:10px; border-radius:4px;">
                             <div class="hist-sum-item"><div>本月已填</div><div class="hist-sum-val" id="hist-month-val" style="color: var(--accent); font-weight:bold;">0h</div></div>
                             <div style="width:1px; background:#444;"></div>
@@ -1192,8 +1192,17 @@ function calcOT(schedule, clockIn, clockOut) {
             </div>
 
             <div id="manual-modal">
-                <div class="manual-header" id="manual-header"><h2>📘 DJWebTool操作手册 V45.1</h2><div class="close-manual" id="close-manual">×</div></div>
+                <div class="manual-header" id="manual-header"><h2>📘 DJWebTool操作手册 V45.2</h2><div class="close-manual" id="close-manual">×</div></div>
                 <div class="manual-content">
+                     <h3>⚙ V45.2 版本更新</h3>
+                    <ul>
+                        <li>
+                        <strong> 工作量系统修复</strong>
+                        <li>
+                            工作量系统网址变更修复
+                        </li>
+                        </li>
+                    </ul>
                     <h3>😀 V45.1 版本更新</h3>
                     <ul>
                         <li>
